@@ -228,7 +228,10 @@ function sheet(title,body){
   document.getElementById("mclose").onclick=closeModal;
 }
 function fieldHTML(id,label,val,type,ph,hint){
-  return '<label class="field"><span>'+label+'</span><input id="'+id+'" type="'+(type||"text")+'" '+(type==="number"?'inputmode="decimal" ':'')+'value="'+esc(val??"")+'" placeholder="'+(ph||"")+'">'+(hint?'<span style="font-size:11px;margin-top:4px;margin-bottom:0;color:var(--dim);display:block">'+hint+'</span>':'')+'</label>';
+  let v=val??"";
+  if(type==="number"&&(v===0||v==="0"))v="";
+  const onf=(type==="number")?' onfocus="this.select()"':'';
+  return '<label class="field"><span>'+label+'</span><input id="'+id+'" type="'+(type||"text")+'" '+(type==="number"?'inputmode="decimal" ':'')+'value="'+esc(v)+'" placeholder="'+(ph||"")+'"'+onf+'>'+(hint?'<span style="font-size:11px;margin-top:4px;margin-bottom:0;color:var(--dim);display:block">'+hint+'</span>':'')+'</label>';
 }
 
 // ================= render =================
