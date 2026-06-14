@@ -6,6 +6,8 @@ workflows:
     integrations:
       app_store_connect: ASC_API_KEY
     environment:
+      groups:
+        - appstore_signing
       vars:
         BUNDLE_ID: "com.twotonemotion.allotted"
       node: 20.11.0
@@ -29,6 +31,7 @@ workflows:
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
             --create
           keychain add-certificates
           xcode-project use-profiles
