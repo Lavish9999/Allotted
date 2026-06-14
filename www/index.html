@@ -802,18 +802,29 @@ function openAddGroup(){
   };
 }
 
+function backupStatus(){
+  if(!S.lastBackup)return {text:"Never backed up — grab one now",color:"var(--orange)"};
+  const days=Math.floor((Date.now()-S.lastBackup)/86400000);
+  const txt=days<=0?"Backed up today":days===1?"Backed up yesterday":"Backed up "+days+" days ago";
+  return {text:txt,color:days>7?"var(--orange)":"var(--teal)"};
+}
+
 function openSettings(){
+  const bs=backupStatus();
   sheet("Settings &amp; data",
     '<div class="label" style="margin-bottom:8px">Appearance</div>'
     +'<div class="seg" style="margin-bottom:18px">'
     +'<button data-themeset="dark" style="'+(S.theme!=="light"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Dark</button>'
     +'<button data-themeset="light" style="'+(S.theme==="light"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Light</button>'
     +'</div>'
-    +'<div style="font-size:12px;color:var(--dim);margin-bottom:12px;line-height:1.5">Copy backup is the most reliable — paste the text into Notes or email it to yourself. (File download can be blocked when running as a local file.)</div>'
+    +'<div class="label" style="margin-bottom:8px">Backup &amp; data</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:'+bs.color+';margin-bottom:10px"><span style="width:8px;height:8px;border-radius:99px;background:'+bs.color+';flex-shrink:0"></span>'+bs.text+'</div>'
+    +'<div style="font-size:12px;color:var(--dim);margin-bottom:12px;line-height:1.5">Your data lives only on this device. Back it up regularly — if you clear your browser or delete the app without a backup, it\u2019s gone for good. Copy backup is the most reliable.</div>'
     +'<button id="bkCopy" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;margin-bottom:10px"><span style="display:flex">'+I.copy+'</span> Copy backup to clipboard</button>'
     +'<button id="bkPaste" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:10px;text-align:left"><span style="color:var(--orange);display:flex">'+I.up+'</span> Restore from pasted text</button>'
     +'<div style="height:1px;background:var(--line);margin:6px 0 12px"></div>'
     +'<button id="bkDown" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:10px;text-align:left"><span style="color:var(--teal);display:flex">'+I.down+'</span> Download backup file (.json)</button>'
+    +'<button id="csvExp" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:10px;text-align:left"><span style="color:var(--teal);display:flex">'+I.down+'</span> Export transactions (.csv)</button>'
     +'<button id="bkUp" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:10px;text-align:left"><span style="color:var(--orange);display:flex">'+I.up+'</span> Restore from file</button>'
     +'<button id="resetActuals" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:10px;text-align:left"><span style="color:var(--teal);display:flex">'+I.copy+'</span> Clear transactions ('+monthShort(mk)+') — keep plan</button>'
     +'<button id="mDel" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--red);margin-bottom:10px;text-align:left"><span style="display:flex">'+I.warn+'</span> Clear '+monthName(mk)+' only</button>'
@@ -859,6 +870,24 @@ function openSettings(){
     }catch(e){toast("Download blocked — use Copy backup instead","var(--red)");}
   };
   document.getElementById("bkUp").onclick=()=>document.getElementById("fileInput").click();
+  document.getElementById("csvExp").onclick=()=>{
+    const rows=[["Month","Category","Line","Date","Amount","Note","Recurring"]];
+    Object.keys(S.months).sort().forEach(k=>{
+      const m=S.months[k];if(!m||!m.groups)return;
+      m.groups.forEach(g=>g.items.forEach(i=>(i.txns||[]).forEach(x=>{
+        rows.push([k,g.name,i.name,x.date||"",x.amount,x.note||"",i.recurring?"yes":"no"]);
+      })));
+    });
+    if(rows.length<=1){toast("No transactions to export yet","var(--orange)");return;}
+    const csvEsc=v=>{v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    const csv=rows.map(r=>r.map(csvEsc).join(",")).join("\n");
+    try{
+      const blob=new Blob([csv],{type:"text/csv"});
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+      a.download="allotted-transactions-"+new Date().toISOString().slice(0,10)+".csv";a.click();
+      URL.revokeObjectURL(a.href);toast("Exported "+(rows.length-1)+" transactions to CSV");
+    }catch(e){toast("Download blocked here — try from the installed app","var(--red)");}
+  };
   document.getElementById("mDel").onclick=()=>{
     delete S.months[mk];closeModal();commit();toast(monthName(mk)+" cleared","var(--orange)");
   };
