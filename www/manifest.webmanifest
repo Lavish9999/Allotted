@@ -2,7 +2,7 @@
   "name": "Allotted",
   "short_name": "Allotted",
   "description": "Give every dollar a job. A clean monthly zero-based budgeting tracker.",
-  "start_url": "./Allotted.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0B0E10",
