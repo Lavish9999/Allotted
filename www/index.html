@@ -41,8 +41,8 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 body{background:
     radial-gradient(135% 105% at 50% 22%, transparent 52%, var(--vignette) 100%),
-    radial-gradient(120% 80% at 10% -8%, rgba(45,212,191,.08), transparent 55%),
-    radial-gradient(130% 95% at 108% 108%, rgba(245,155,69,.06), transparent 55%),
+    radial-gradient(120% 80% at 10% -8%, rgba(45,212,191,.05), transparent 60%),
+    radial-gradient(130% 95% at 108% 108%, rgba(245,155,69,.04), transparent 60%),
     var(--bg);
   background-attachment:fixed;
   color:var(--text);font-family:-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,sans-serif;min-height:100vh;padding-bottom:calc(110px + env(safe-area-inset-bottom));letter-spacing:-.005em}
@@ -76,10 +76,10 @@ button:active{transform:scale(.96)}
 .field input{width:100%;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;color:var(--text);padding:12px 14px;font-size:15px;outline:none}
 input[type=number]{font-family:ui-monospace,'SF Mono',Menlo,monospace}
 .header{position:relative;overflow:hidden;padding:calc(22px + env(safe-area-inset-top)) 20px 20px;border-bottom:1px solid var(--line)}
-.glow1,.glow2{position:absolute;border-radius:50%;filter:blur(48px);animation:glowPulse 6s ease-in-out infinite}
-.glow1{top:-150px;left:-90px;width:340px;height:340px;background:radial-gradient(circle,rgba(45,212,191,.20),transparent 68%)}
-.glow2{top:-130px;right:-110px;width:360px;height:360px;background:radial-gradient(circle,rgba(245,155,69,.15),transparent 68%);animation-duration:7s;animation-delay:1s}
-@keyframes glowPulse{0%,100%{opacity:.55}50%{opacity:.9}}
+.glow1,.glow2{position:absolute;border-radius:50%;filter:blur(75px);animation:glowPulse 7s ease-in-out infinite}
+.glow1{top:-210px;left:-150px;width:480px;height:480px;background:radial-gradient(circle,rgba(45,212,191,.10),transparent 72%)}
+.glow2{top:-200px;right:-160px;width:500px;height:500px;background:radial-gradient(circle,rgba(245,155,69,.07),transparent 72%);animation-duration:8s;animation-delay:1s}
+@keyframes glowPulse{0%,100%{opacity:.65}50%{opacity:.85}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
 .fade-up{animation:fadeUp .45s ease both}
@@ -92,11 +92,11 @@ button:active{transform:scale(.97)}
 .nav-inner{display:flex;gap:2px;background:var(--nav);backdrop-filter:blur(18px);border:1px solid var(--cardb);border-radius:99px;padding:5px;box-shadow:0 12px 40px rgba(0,0,0,.55);pointer-events:auto}
 .nav button{display:flex;align-items:center;gap:7px;border:none;background:transparent;color:var(--dim);border-radius:99px;padding:10px 13px;font-size:12.5px;font-weight:800}
 .nav button.on{background:var(--tealsoft);color:var(--teal);padding:10px 16px;box-shadow:0 0 0 1px var(--tealb),0 4px 16px rgba(45,212,191,.20)}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;z-index:50;transition:padding-bottom .2s ease}
 .sheet{background:var(--sheet);border:1px solid var(--cardb);border-radius:26px 26px 0 0;padding:22px 22px calc(22px + env(safe-area-inset-bottom));width:100%;max-width:460px;max-height:88vh;overflow-y:auto;box-shadow:0 -10px 50px rgba(0,0,0,.6);animation:fadeUp .3s ease}
 .handle{width:40px;height:4px;background:var(--handle);border-radius:99px;margin:0 auto 16px}
 .sheet h3{font-size:18px;font-weight:800;margin-bottom:18px}
-.toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:rgba(19,23,26,.95);backdrop-filter:blur(12px);color:var(--text);border-radius:16px;padding:13px 20px;font-size:14px;font-weight:700;z-index:60;box-shadow:0 10px 40px rgba(0,0,0,.6);max-width:90%;animation:toastIn .3s ease}
+.toast{position:fixed;top:calc(env(safe-area-inset-top) + 14px);left:50%;transform:translateX(-50%);background:rgba(19,23,26,.95);backdrop-filter:blur(12px);color:var(--text);border-radius:16px;padding:13px 20px;font-size:14px;font-weight:700;z-index:60;box-shadow:0 10px 40px rgba(0,0,0,.6);max-width:90%;animation:toastIn .3s ease}
 .irow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .irow:last-of-type{border-bottom:none}
 .minibar{height:4px;background:var(--track);border-radius:99px;overflow:hidden;margin-top:6px}
@@ -242,7 +242,17 @@ const I={
   check:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
 };
 
-function closeModal(){document.getElementById("modal").innerHTML="";}
+let _kbL=null;
+function _kbSync(){
+  const mbg=document.getElementById("mbg");if(!mbg||!window.visualViewport)return;
+  const kb=Math.max(0,window.innerHeight-window.visualViewport.height-window.visualViewport.offsetTop);
+  mbg.style.paddingBottom=kb+"px";
+  const sh=mbg.querySelector(".sheet");if(sh)sh.style.maxHeight=(window.visualViewport.height-24)+"px";
+}
+function closeModal(){
+  if(_kbL&&window.visualViewport){window.visualViewport.removeEventListener("resize",_kbL);window.visualViewport.removeEventListener("scroll",_kbL);_kbL=null;}
+  document.getElementById("modal").innerHTML="";
+}
 function sheet(title,body){
   document.getElementById("modal").innerHTML=
     '<div class="modal-bg" id="mbg"><div class="sheet" onclick="event.stopPropagation()">'
@@ -252,6 +262,7 @@ function sheet(title,body){
     +body+'</div></div>';
   document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")closeModal();};
   document.getElementById("mclose").onclick=closeModal;
+  if(window.visualViewport){_kbL=_kbSync;window.visualViewport.addEventListener("resize",_kbL);window.visualViewport.addEventListener("scroll",_kbL);}
 }
 function fieldHTML(id,label,val,type,ph,hint){
   let v=val??"";
@@ -260,7 +271,33 @@ function fieldHTML(id,label,val,type,ph,hint){
   return '<label class="field"><span>'+label+'</span><input id="'+id+'" type="'+(type||"text")+'" '+(type==="number"?'inputmode="decimal" ':'')+'value="'+esc(v)+'" placeholder="'+(ph||"")+'"'+onf+'>'+(hint?'<span style="font-size:11px;margin-top:4px;margin-bottom:0;color:var(--dim);display:block">'+hint+'</span>':'')+'</label>';
 }
 
-// ================= render =================
+function openMonthPicker(){
+  const MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  let py=Number(mk.slice(0,4));
+  function body(){
+    return '<div id="mpBody">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+      +'<button id="mpPrev" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:36px;height:36px;display:flex;align-items:center;justify-content:center">'+I.left+'</button>'
+      +'<div style="font-weight:800;font-size:19px" class="mono">'+py+'</div>'
+      +'<button id="mpNext" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:36px;height:36px;display:flex;align-items:center;justify-content:center">'+I.right+'</button></div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">'
+      +MN.map((nm,i)=>{
+        const k=py+"-"+String(i+1).padStart(2,"0");
+        const sel=k===mk, has=!!S.months[k];
+        return '<button data-pickmo="'+k+'" style="padding:15px 0;border-radius:13px;font-weight:800;font-size:14px;border:1px solid '+(sel?'var(--teal)':'var(--line)')+';background:'+(sel?'var(--teal)':'var(--inset)')+';color:'+(sel?'#062C27':'var(--text)')+'">'+nm+(has&&!sel?'<span style="display:block;font-size:9px;color:var(--teal);font-weight:700;margin-top:2px">•</span>':'')+'</button>';
+      }).join("")
+      +'</div></div>';
+  }
+  function wire(){
+    document.getElementById("mpPrev").onclick=()=>{py--;refresh();};
+    document.getElementById("mpNext").onclick=()=>{py++;refresh();};
+    document.querySelectorAll("[data-pickmo]").forEach(b=>b.onclick=()=>{mk=b.dataset.pickmo;closeModal();render();});
+  }
+  function refresh(){document.getElementById("mpBody").outerHTML=body();wire();}
+  sheet("Jump to month",body());
+  wire();
+}
+
 function render(){
   const m=M(), t=totals(m);
   const noData=Object.keys(S.months).length===0;
@@ -336,7 +373,7 @@ function headerHTML(t,m){
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
     +'<div style="display:flex;align-items:center;gap:6px">'
     +'<button data-mnav="-1" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">'+I.left+'</button>'
-    +'<div style="font-weight:800;font-size:16px;min-width:150px;text-align:center">'+monthName(mk)+'</div>'
+    +'<button id="mpick" style="font-weight:800;font-size:16px;min-width:150px;text-align:center;background:none;border:none;color:var(--text);padding:5px 6px;border-radius:9px;font-family:inherit;letter-spacing:-.01em">'+monthName(mk)+'</button>'
     +'<button data-mnav="1" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">'+I.right+'</button></div>'
     +'<button id="settingsBtn" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:34px;height:34px;display:flex;align-items:center;justify-content:center">'+I.gear+'</button></div>'
     +(m?heroBlockHTML(t)
@@ -958,6 +995,7 @@ function bind(){
     render();
   });
   const sb=document.getElementById("settingsBtn");if(sb)sb.onclick=openSettings;
+  const mpk=document.getElementById("mpick");if(mpk)mpk.onclick=openMonthPicker;
   document.querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>{
     const p=el.dataset.edit.split(":");
     if(p[0]==="item")openEditEntry("item",p[1],p[2]);
