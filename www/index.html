@@ -40,9 +40,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 body{background:
-    radial-gradient(135% 105% at 50% 22%, transparent 52%, var(--vignette) 100%),
-    radial-gradient(120% 80% at 10% -8%, rgba(45,212,191,.05), transparent 60%),
-    radial-gradient(130% 95% at 108% 108%, rgba(245,155,69,.04), transparent 60%),
+    radial-gradient(135% 105% at 50% 22%, transparent 60%, var(--vignette) 100%),
     var(--bg);
   background-attachment:fixed;
   color:var(--text);font-family:-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,sans-serif;min-height:100vh;padding-bottom:calc(110px + env(safe-area-inset-bottom));letter-spacing:-.005em}
@@ -76,10 +74,7 @@ button:active{transform:scale(.96)}
 .field input{width:100%;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;color:var(--text);padding:12px 14px;font-size:15px;outline:none}
 input[type=number]{font-family:ui-monospace,'SF Mono',Menlo,monospace}
 .header{position:relative;overflow:hidden;padding:calc(22px + env(safe-area-inset-top)) 20px 20px;border-bottom:1px solid var(--line)}
-.glow1,.glow2{position:absolute;border-radius:50%;filter:blur(75px);animation:glowPulse 7s ease-in-out infinite}
-.glow1{top:-210px;left:-150px;width:480px;height:480px;background:radial-gradient(circle,rgba(45,212,191,.10),transparent 72%)}
-.glow2{top:-200px;right:-160px;width:500px;height:500px;background:radial-gradient(circle,rgba(245,155,69,.07),transparent 72%);animation-duration:8s;animation-delay:1s}
-@keyframes glowPulse{0%,100%{opacity:.65}50%{opacity:.85}}
+.glow1,.glow2{display:none}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
 .fade-up{animation:fadeUp .45s ease both}
