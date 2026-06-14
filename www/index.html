@@ -326,6 +326,26 @@ function pacingNote(){
   return "day "+now.getDate()+" of "+dim;
 }
 
+// "Safe to spend today": flexible (non-recurring) money left, spread over days remaining.
+// Bills (recurring) are committed, so they're excluded from the daily pool.
+function safeToSpend(m){
+  if(!m)return null;
+  const now=new Date();
+  const curKey=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+  if(mk!==curKey)return null; // only meaningful for the live month
+  const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const daysLeft=Math.max(1,dim-now.getDate()+1);
+  let pool=0,flexPlanned=0,flexSpent=0;
+  m.groups.forEach(g=>g.items.forEach(i=>{
+    if(i.recurring)return;
+    flexPlanned+=(i.planned||0);
+    flexSpent+=(i.actual||0);
+    pool+=(i.planned||0)-(i.actual||0);
+  }));
+  if(flexPlanned<=0)return null;
+  return {perDay:Math.max(0,pool)/daysLeft,pool:pool,daysLeft:daysLeft,flexPlanned:flexPlanned,flexSpent:flexSpent,over:pool<-0.5};
+}
+
 function heroBlockHTML(t){
   if(tab==="track"){
     const left=t.planned-t.actual;
@@ -420,7 +440,22 @@ function budgetHTML(m,t){
 }
 
 function trackHTML(m,t){
-  let h='<button id="logTxn" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Log a transaction</button>';
+  let h='';
+  const sts=safeToSpend(m);
+  if(sts){
+    const hot=sts.flexSpent>sts.flexPlanned*0.85;
+    const col=sts.over?"var(--red)":(hot?"var(--orange)":"var(--teal)");
+    const glow=sts.over?"rgba(248,113,113,.35)":(hot?"rgba(245,155,69,.35)":"rgba(45,212,191,.4)");
+    h+='<div class="card" style="text-align:center;padding:18px 18px 16px;margin-bottom:16px">'
+      +'<div style="color:var(--dim);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;margin-bottom:6px">Safe to spend today</div>'
+      +'<div class="mono" style="font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1;color:'+col+';text-shadow:0 0 24px '+glow+'">'+fmt(sts.over?0:sts.perDay)+'</div>'
+      +'<div style="font-size:12px;color:var(--dim);margin-top:8px;line-height:1.5">'
+      +(sts.over
+          ?'You\u2019re '+fmt(-sts.pool)+' over your flexible budget'
+          :fmt(sts.pool)+' left in flexible spending \u00b7 '+sts.daysLeft+' day'+(sts.daysLeft>1?'s':'')+' to go')
+      +'</div></div>';
+  }
+  h+='<button id="logTxn" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Log a transaction</button>';
   const hasLines=m.groups.some(g=>g.items.length);
   if(!hasLines){
     h+='<div style="text-align:center;padding:30px 20px;color:var(--dim);font-size:13px;line-height:1.6">No budget lines yet.<br>Allocate your month on the <b style="color:var(--teal)">Budget</b> tab first, then track spending here.</div>';
@@ -670,13 +705,17 @@ function openAddEntry(kind,gid){
   sheet("Add line",
     fieldHTML("a_name","Name","","text",isSpend?"e.g. Car wash":"e.g. Side income")
     +fieldHTML("a_amount",isSpend?"Planned ($)":"Amount ($)","","number","0")
+    +(isSpend?'<button id="a_rec" type="button" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:13px;color:var(--text);font-size:14px"><span style="display:flex;align-items:center;gap:8px">'+I.repeat+' Recurring monthly bill</span><span id="a_recState" style="font-weight:800;color:var(--dim)">OFF</span></button>':'')
     +'<button id="aGo" class="btn btn-teal">Add</button>');
+  let recOn=false;
+  const recBtn=document.getElementById("a_rec");
+  if(recBtn)recBtn.onclick=()=>{recOn=!recOn;const s=document.getElementById("a_recState");s.textContent=recOn?'ON':'OFF';s.style.color=recOn?'var(--teal)':'var(--dim)';};
   document.getElementById("aGo").onclick=()=>{
     const name=document.getElementById("a_name").value;if(!name)return;
     const amt=parseFloat(document.getElementById("a_amount").value)||0;
     if(kind==="income")m.income.push({id:nid(),name,amount:amt});
     else if(kind==="savings")m.savings.push({id:nid(),name,amount:amt});
-    else{const g=m.groups.find(x=>x.id===gid);if(g)g.items.push({id:nid(),name,planned:amt,actual:0});}
+    else{const g=m.groups.find(x=>x.id===gid);if(g)g.items.push({id:nid(),name,planned:amt,actual:0,txns:[],recurring:recOn});}
     closeModal();commit();
   };
 }
