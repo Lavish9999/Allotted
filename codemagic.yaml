@@ -4,14 +4,10 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: ASC_API_KEY   # name of the API key you add in Codemagic UI
+      app_store_connect: ASC_API_KEY
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.twotonemotion.allotted
       vars:
         BUNDLE_ID: "com.twotonemotion.allotted"
-        APP_STORE_APPLE_ID: 0000000000   # <-- replace with the Apple ID number from App Store Connect once the app record exists
       node: 20.x
       xcode: latest
       cocoapods: default
@@ -28,8 +24,13 @@ workflows:
       - name: Install CocoaPods deps
         script: |
           cd ios/App && pod install
-      - name: Set up code signing
+      - name: Set up code signing (creates cert + profile if missing)
         script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
           xcode-project use-profiles
       - name: Increment build number
         script: |
@@ -47,4 +48,4 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        submit_to_app_store: false   # flip to true when you're ready for the public review submission
+        submit_to_app_store: false
