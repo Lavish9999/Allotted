@@ -23,6 +23,9 @@ workflows:
         script: npx capacitor-assets generate --ios || true
       - name: Sync web assets into iOS project
         script: npx cap sync ios
+      - name: Skip export-compliance prompt
+        script: |
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/App/App/Info.plist
       - name: Install CocoaPods deps
         script: |
           cd ios/App && pod install
