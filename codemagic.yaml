@@ -8,7 +8,7 @@ workflows:
     environment:
       vars:
         BUNDLE_ID: "com.twotonemotion.allotted"
-      node: 20.x
+      node: 20.11.0
       xcode: latest
       cocoapods: default
     scripts:
