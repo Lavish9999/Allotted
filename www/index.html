@@ -15,7 +15,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <style>
 :root{
-  --bg:#0B0E10; --card:rgba(255,255,255,.035); --cardb:rgba(255,255,255,.07);
+  --bg:#0B0E10; --card:rgba(255,255,255,.035); --cardb:rgba(255,255,255,.07); --rowsolid:#14171A;
   --inset:rgba(255,255,255,.05); --line:rgba(255,255,255,.08);
   --text:#EDF1F2; --dim:#8C979C;
   --sheet:#13171A; --nav:rgba(19,23,26,.88); --inputbg:rgba(0,0,0,.3);
@@ -27,7 +27,7 @@
   --purple:#A78BFA; --purplesoft:rgba(167,139,250,.14);
 }
 [data-theme="light"]{
-  --bg:#F2F5F6; --card:rgba(0,0,0,.022); --cardb:rgba(0,0,0,.10);
+  --bg:#F2F5F6; --card:rgba(0,0,0,.022); --cardb:rgba(0,0,0,.10); --rowsolid:#ECEFF1;
   --inset:rgba(0,0,0,.04); --line:rgba(0,0,0,.10);
   --text:#15201F; --dim:#5A696C;
   --sheet:#FFFFFF; --nav:rgba(255,255,255,.92); --inputbg:rgba(0,0,0,.045);
@@ -64,6 +64,13 @@ button:active{transform:scale(.96)}
 .grow .gv{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-weight:700;white-space:nowrap}
 .gadd{width:100%;text-align:left;background:none;border:none;color:var(--teal);font-size:11.5px;font-weight:700;padding:7px 12px;display:flex;align-items:center;gap:5px}
 .gspent{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:10px;margin-top:2px}
+.swipe{position:relative;overflow:hidden}
+.swipe-actions{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:stretch}
+.swact{border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:76px;font-size:11px;font-weight:800;cursor:pointer}
+.swact svg{width:17px;height:17px}
+.swact.pay{background:#14B8A6;color:#062C27}
+.swact.del{background:var(--red);color:#fff}
+.swipe-fg{background:var(--rowsolid);position:relative;z-index:1;user-select:none;-webkit-user-select:none;transition:transform .25s cubic-bezier(.2,.8,.2,1);touch-action:pan-y;will-change:transform}
 .card{background:var(--card);border:1px solid var(--cardb);border-radius:22px;padding:18px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.06);margin-bottom:14px}
 .label{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:7px}
 .btn{border:none;border-radius:14px;padding:14px 0;font-weight:800;font-size:15px;width:100%}
@@ -235,6 +242,9 @@ const I={
   list:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2"/><circle cx="3.5" cy="12" r="1.2"/><circle cx="3.5" cy="18" r="1.2"/></svg>',
   repeat:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
   check:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  drag:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
+  chevUp:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg>',
+  chevDown:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
 };
 
 let _kbL=null;
@@ -471,7 +481,9 @@ function budgetHTML(m,t){
     +compactSection("2","SAVINGS","var(--purple)",m.savings,"savings",'<span style="color:'+(t.rate>=15?"var(--teal)":"var(--orange)")+'">'+t.rate.toFixed(0)+'% rate</span>')
     +'</div>';
   // spend groups in tight spreadsheet-style grid
-  h+='<div class="label" style="margin:4px 0 10px;color:var(--orange)">3 · Spend</div>';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px"><div class="label" style="color:var(--orange)">3 · Spend</div>'
+    +(m.groups.length>1?'<button data-reorder="1" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:9px;padding:5px 10px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px">'+I.drag+' Reorder</button>':'')
+    +'</div>';
   h+='<div class="sheet-grid">';
   m.groups.forEach(g=>{
     const gp=g.items.reduce((s,i)=>s+(i.planned||0),0);
@@ -521,6 +533,7 @@ function trackHTML(m,t){
   }
   let dueRec=0;m.groups.forEach(g=>g.items.forEach(i=>{if(i.recurring&&((i.planned||0)-(i.actual||0))>0.5)dueRec++;}));
   if(dueRec)h+='<button id="payAllRec" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:-4px auto 16px;color:var(--teal);border-color:var(--tealb)">'+I.check+' Mark '+dueRec+' recurring bill'+(dueRec>1?'s':'')+' paid</button>';
+  if(m.groups.filter(g=>g.items.length).length>1)h+='<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button data-reorder="1" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:9px;padding:5px 10px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px">'+I.drag+' Reorder</button></div>';
   h+='<div class="sheet-grid">';
   m.groups.forEach(g=>{
     if(!g.items.length)return;
@@ -542,12 +555,17 @@ function trackHTML(m,t){
       const irem=(i.planned||0)-(i.actual||0);
       const n=(i.txns||[]).length;
       const showPay=i.recurring&&irem>0.5;
-      h+='<div class="grow" data-txn="'+g.id+':'+i.id+'">'
+      const payable=irem>0.5;
+      h+='<div class="swipe">'
+        +'<div class="swipe-actions">'
+        +(payable?'<button class="swact pay" data-payswipe="'+g.id+':'+i.id+'">'+I.check+'<span>Pay</span></button>':'')
+        +'<button class="swact del" data-delswipe="'+g.id+':'+i.id+'">'+I.trash+'<span>Delete</span></button>'
+        +'</div>'
+        +'<div class="grow swipe-fg" data-gid="'+g.id+'" data-iid="'+i.id+'">'
         +'<div class="gn">'+esc(i.name)+(i.recurring?' <span style="color:var(--dim);opacity:.6;vertical-align:middle">'+I.repeat+'</span>':'')
         +'<div class="gspent" style="color:var(--dim)">'+fmt(i.actual||0)+' spent'+(n?' · '+n+' txn'+(n>1?'s':''):'')+'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:8px">'
-        +(showPay?'<button data-paid="'+g.id+':'+i.id+'" style="background:var(--tealsoft);border:1px solid var(--tealb);color:var(--teal);font-weight:800;font-size:11px;padding:5px 9px;border-radius:9px;display:flex;align-items:center;gap:4px">'+I.check+' Pay</button>':'')
-        +'<div class="gv" style="color:'+(irem<0?"var(--red)":"var(--text)")+'">'+fmt(irem)+'</div></div></div>';
+        +'<div class="gv" style="color:'+(irem<0?"var(--red)":"var(--text)")+'">'+fmt(irem)+'</div></div>'
+        +'</div>';
     });
     h+='</div>';
   });
@@ -651,6 +669,71 @@ function markPaid(gid,iid){
   i.txns.push({id:nid(),date:new Date().toISOString().slice(0,10),amount:due,note:"Paid in full"});
   recalcItem(i);commit();
   toast("Paid "+fmtC(due)+" · "+esc(i.name),"var(--teal)");
+}
+
+let _openSwipe=null;
+function deleteLine(gid,iid){
+  const m=M();if(!m)return;
+  const g=m.groups.find(x=>x.id===gid);if(!g)return;
+  const idx=g.items.findIndex(x=>x.id===iid);if(idx<0)return;
+  const removed=g.items[idx];
+  g.items.splice(idx,1);commit();
+  toastUndo(esc(removed.name)+" deleted",()=>{
+    const g2=M()&&M().groups.find(x=>x.id===gid);
+    if(g2){g2.items.splice(Math.min(idx,g2.items.length),0,removed);commit();toast("Restored · "+esc(removed.name),"var(--teal)");}
+  });
+}
+function toastUndo(msg,undoFn){
+  document.querySelectorAll(".toast").forEach(t=>t.remove());
+  const t=document.createElement("div");t.className="toast";t.style.border="1px solid var(--red)";
+  t.style.display="flex";t.style.alignItems="center";t.style.gap="10px";
+  const s=document.createElement("span");s.textContent=msg;
+  const b=document.createElement("button");b.textContent="Undo";
+  b.style.cssText="background:none;border:none;color:var(--teal);font-weight:800;font-size:14px;cursor:pointer;padding:2px 4px";
+  b.onclick=()=>{undoFn();t.remove();};
+  t.appendChild(s);t.appendChild(b);
+  document.body.appendChild(t);setTimeout(()=>{if(t.parentNode)t.remove();},5000);
+}
+function resetSwipe(fg){fg.style.transition="transform .25s cubic-bezier(.2,.8,.2,1)";fg.style.transform="translateX(0)";}
+function enableSwipe(){
+  _openSwipe=null;
+  document.querySelectorAll(".swipe-fg").forEach(fg=>{
+    const actions=fg.parentElement.querySelector(".swipe-actions");
+    const W=actions?actions.offsetWidth:0;
+    let sx=0,sy=0,drag=false,decided=false,moved=false,baseOpen=false;
+    fg.addEventListener("pointerdown",(e)=>{
+      sx=e.clientX;sy=e.clientY;drag=false;decided=false;moved=false;baseOpen=(_openSwipe===fg);
+      fg.style.transition="none";
+      const move=(ev)=>{
+        const dx=ev.clientX-sx,dy=ev.clientY-sy;
+        if(!decided){
+          if(Math.abs(dx)<6&&Math.abs(dy)<6)return;
+          decided=true;drag=Math.abs(dx)>Math.abs(dy);
+          if(!drag){cleanup();return;}
+        }
+        ev.preventDefault();moved=true;
+        const base=baseOpen?-W:0;let x=base+dx;
+        if(x>0)x*=0.3;if(x<-W)x=-W+(x+W)*0.3;
+        fg.style.transform="translateX("+x+"px)";
+      };
+      const up=(ev)=>{
+        cleanup();if(!drag)return;
+        fg.style.transition="transform .25s cubic-bezier(.2,.8,.2,1)";
+        const x=(baseOpen?-W:0)+(ev.clientX-sx);
+        if(x<-W/2){fg.style.transform="translateX("+(-W)+"px)";if(_openSwipe&&_openSwipe!==fg)resetSwipe(_openSwipe);_openSwipe=fg;}
+        else{fg.style.transform="translateX(0)";if(_openSwipe===fg)_openSwipe=null;}
+      };
+      function cleanup(){document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);}
+      document.addEventListener("pointermove",move,{passive:false});
+      document.addEventListener("pointerup",up);
+      document.addEventListener("pointercancel",up);
+    });
+    fg.addEventListener("click",(e)=>{
+      if(moved){moved=false;e.preventDefault();e.stopPropagation();return;}
+      if(_openSwipe){resetSwipe(_openSwipe);_openSwipe=null;e.preventDefault();e.stopPropagation();return;}
+      openTxn(fg.dataset.gid,fg.dataset.iid);
+    });
+  });
 }
 
 function payAllRecurring(){
@@ -834,6 +917,70 @@ function openAddGroup(){
   };
 }
 
+function openReorder(){
+  const m=M();
+  if(!m||!m.groups.length){toast("No categories to reorder yet");return;}
+  function rows(){
+    return m.groups.map((g,idx)=>
+      '<div class="rerow" data-gid="'+g.id+'" style="display:flex;align-items:center;gap:6px;background:var(--inset);border:1px solid var(--line);border-radius:13px;padding:11px 10px 11px 4px;margin-bottom:8px;user-select:none;-webkit-user-select:none">'
+      +'<span class="rehandle" style="color:var(--dim);display:flex;padding:5px 6px;cursor:grab;touch-action:none">'+I.drag+'</span>'
+      +'<span style="flex:1;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.name)+'</span>'
+      +'<button data-reup="'+g.id+'"'+(idx===0?' disabled':'')+' style="background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;opacity:'+(idx===0?'.25':'1')+'">'+I.chevUp+'</button>'
+      +'<button data-redown="'+g.id+'"'+(idx===m.groups.length-1?' disabled':'')+' style="background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;opacity:'+(idx===m.groups.length-1?'.25':'1')+'">'+I.chevDown+'</button>'
+      +'</div>').join("");
+  }
+  sheet("Reorder categories",
+    '<div style="color:var(--dim);font-size:12.5px;line-height:1.5;margin-bottom:14px">Drag the handle, or tap the arrows. Applies to '+monthName(mk)+'.</div>'
+    +'<div id="relist">'+rows()+'</div>');
+  function commitFromDOM(){
+    const ids=[...document.querySelectorAll("#relist .rerow")].map(r=>r.dataset.gid);
+    m.groups.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
+    save();render();
+  }
+  function rebuild(){const l=document.getElementById("relist");if(l){l.innerHTML=rows();wire();}}
+  function wire(){
+    document.querySelectorAll("[data-reup]").forEach(b=>b.onclick=()=>{
+      const i=m.groups.findIndex(g=>g.id===b.dataset.reup);
+      if(i>0){const a=m.groups;[a[i-1],a[i]]=[a[i],a[i-1]];save();render();rebuild();}
+    });
+    document.querySelectorAll("[data-redown]").forEach(b=>b.onclick=()=>{
+      const i=m.groups.findIndex(g=>g.id===b.dataset.redown);
+      if(i>=0&&i<m.groups.length-1){const a=m.groups;[a[i+1],a[i]]=[a[i],a[i+1]];save();render();rebuild();}
+    });
+    const list=document.getElementById("relist");
+    list.querySelectorAll(".rehandle").forEach(h=>{
+      h.onpointerdown=(e)=>{
+        e.preventDefault();
+        const drag=h.closest(".rerow");
+        let baseY=e.clientY;
+        drag.style.transition="none";drag.style.position="relative";drag.style.zIndex="20";
+        drag.style.boxShadow="0 10px 28px rgba(0,0,0,.55)";drag.style.opacity=".97";
+        const move=(ev)=>{
+          drag.style.transform="translateY("+(ev.clientY-baseY)+"px)";
+          const dRect=drag.getBoundingClientRect(),dMid=dRect.top+dRect.height/2;
+          for(const r of [...list.querySelectorAll(".rerow")]){
+            if(r===drag)continue;
+            const rect=r.getBoundingClientRect(),mid=rect.top+rect.height/2;
+            const rAfter=!!(drag.compareDocumentPosition(r)&Node.DOCUMENT_POSITION_FOLLOWING);
+            if(rAfter&&dMid>mid){list.insertBefore(drag,r.nextSibling);baseY=ev.clientY;drag.style.transform="translateY(0)";break;}
+            if(!rAfter&&dMid<mid){list.insertBefore(drag,r);baseY=ev.clientY;drag.style.transform="translateY(0)";break;}
+          }
+        };
+        const up=()=>{
+          document.removeEventListener("pointermove",move);
+          document.removeEventListener("pointerup",up);
+          drag.style.transition="";drag.style.transform="";drag.style.position="";
+          drag.style.zIndex="";drag.style.boxShadow="";drag.style.opacity="";
+          commitFromDOM();rebuild();
+        };
+        document.addEventListener("pointermove",move);
+        document.addEventListener("pointerup",up);
+      };
+    });
+  }
+  wire();
+}
+
 function backupStatus(){
   if(!S.lastBackup)return {text:"Never backed up — grab one now",color:"var(--orange)"};
   const days=Math.floor((Date.now()-S.lastBackup)/86400000);
@@ -991,6 +1138,7 @@ function bind(){
   });
   const sb=document.getElementById("settingsBtn");if(sb)sb.onclick=openSettings;
   const mpk=document.getElementById("mpick");if(mpk)mpk.onclick=openMonthPicker;
+  document.querySelectorAll("[data-reorder]").forEach(b=>b.onclick=openReorder);
   document.querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>{
     const p=el.dataset.edit.split(":");
     if(p[0]==="item")openEditEntry("item",p[1],p[2]);
@@ -1012,6 +1160,9 @@ function bind(){
   document.querySelectorAll("[data-txn]").forEach(el=>el.onclick=()=>{const p=el.dataset.txn.split(":");openTxn(p[0],p[1]);});
   document.querySelectorAll("[data-gtxn]").forEach(el=>el.onclick=()=>openGroupTxns(el.dataset.gtxn));
   document.querySelectorAll("[data-paid]").forEach(el=>el.onclick=e=>{e.stopPropagation();const p=el.dataset.paid.split(":");markPaid(p[0],p[1]);});
+  document.querySelectorAll("[data-payswipe]").forEach(el=>el.onclick=e=>{e.stopPropagation();const p=el.dataset.payswipe.split(":");markPaid(p[0],p[1]);});
+  document.querySelectorAll("[data-delswipe]").forEach(el=>el.onclick=e=>{e.stopPropagation();const p=el.dataset.delswipe.split(":");deleteLine(p[0],p[1]);});
+  enableSwipe();
   const pa=document.getElementById("payAllRec");if(pa)pa.onclick=payAllRecurring;
   const lt=document.getElementById("logTxn");if(lt)lt.onclick=openTxnPicker;
   const ag=document.getElementById("addGroup");if(ag)ag.onclick=openAddGroup;
