@@ -30,7 +30,7 @@ body{background:
     radial-gradient(130% 95% at 108% 108%, rgba(245,155,69,.06), transparent 55%),
     var(--bg);
   background-attachment:fixed;
-  color:var(--text);font-family:-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,sans-serif;min-height:100vh;padding-bottom:110px;letter-spacing:-.005em}
+  color:var(--text);font-family:-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,sans-serif;min-height:100vh;padding-bottom:calc(110px + env(safe-area-inset-bottom));letter-spacing:-.005em}
 .mono{font-family:ui-monospace,'SF Mono',Menlo,Monaco,monospace}
 button{transition:transform .12s ease,opacity .15s ease;font-family:inherit;cursor:pointer}
 button:active{transform:scale(.96)}
@@ -60,7 +60,7 @@ button:active{transform:scale(.96)}
 .field span{display:block;color:var(--dim);font-size:12px;margin-bottom:6px;font-weight:500}
 .field input{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:13px;color:var(--text);padding:12px 14px;font-size:15px;outline:none}
 input[type=number]{font-family:ui-monospace,'SF Mono',Menlo,monospace}
-.header{position:relative;overflow:hidden;padding:22px 20px 20px;border-bottom:1px solid var(--line)}
+.header{position:relative;overflow:hidden;padding:calc(22px + env(safe-area-inset-top)) 20px 20px;border-bottom:1px solid var(--line)}
 .glow1,.glow2{position:absolute;border-radius:50%;filter:blur(48px);animation:glowPulse 6s ease-in-out infinite}
 .glow1{top:-150px;left:-90px;width:340px;height:340px;background:radial-gradient(circle,rgba(45,212,191,.20),transparent 68%)}
 .glow2{top:-130px;right:-110px;width:360px;height:360px;background:radial-gradient(circle,rgba(245,155,69,.15),transparent 68%);animation-duration:7s;animation-delay:1s}
@@ -68,12 +68,12 @@ input[type=number]{font-family:ui-monospace,'SF Mono',Menlo,monospace}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
 .fade-up{animation:fadeUp .45s ease both}
-.nav{position:fixed;bottom:16px;left:0;right:0;display:flex;justify-content:center;z-index:40;pointer-events:none}
+.nav{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:0;right:0;display:flex;justify-content:center;z-index:40;pointer-events:none}
 .nav-inner{display:flex;gap:2px;background:rgba(19,23,26,.88);backdrop-filter:blur(18px);border:1px solid var(--cardb);border-radius:99px;padding:5px;box-shadow:0 12px 40px rgba(0,0,0,.55);pointer-events:auto}
 .nav button{display:flex;align-items:center;gap:7px;border:none;background:transparent;color:var(--dim);border-radius:99px;padding:10px 13px;font-size:12.5px;font-weight:800}
 .nav button.on{background:var(--tealsoft);color:var(--teal);padding:10px 16px;box-shadow:0 0 0 1px var(--tealb),0 4px 16px rgba(45,212,191,.20)}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;z-index:50}
-.sheet{background:#13171A;border:1px solid var(--cardb);border-radius:26px 26px 0 0;padding:22px;width:100%;max-width:460px;max-height:88vh;overflow-y:auto;box-shadow:0 -10px 50px rgba(0,0,0,.6);animation:fadeUp .3s ease}
+.sheet{background:#13171A;border:1px solid var(--cardb);border-radius:26px 26px 0 0;padding:22px 22px calc(22px + env(safe-area-inset-bottom));width:100%;max-width:460px;max-height:88vh;overflow-y:auto;box-shadow:0 -10px 50px rgba(0,0,0,.6);animation:fadeUp .3s ease}
 .handle{width:40px;height:4px;background:rgba(255,255,255,.15);border-radius:99px;margin:0 auto 16px}
 .sheet h3{font-size:18px;font-weight:800;margin-bottom:18px}
 .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:rgba(19,23,26,.95);backdrop-filter:blur(12px);color:var(--text);border-radius:16px;padding:13px 20px;font-size:14px;font-weight:700;z-index:60;box-shadow:0 10px 40px rgba(0,0,0,.6);max-width:90%;animation:toastIn .3s ease}
@@ -435,9 +435,9 @@ function trackHTML(m,t){
     const over=ga>gp+0.5;
     const barCol=over?"var(--red)":(ga>gp*0.85?"var(--orange)":"var(--teal)");
     h+='<div class="gcard">'
-      +'<div class="ghead" style="flex-direction:column;align-items:stretch;gap:8px;padding:11px 13px">'
+      +'<div class="ghead" data-gtxn="'+g.id+'" style="flex-direction:column;align-items:stretch;gap:8px;padding:11px 13px;cursor:pointer">'
       +'<div style="display:flex;justify-content:space-between;align-items:baseline">'
-      +'<span class="gname">'+esc(g.name)+'</span>'
+      +'<span class="gname" style="display:inline-flex;align-items:center;gap:5px">'+esc(g.name)+'<span style="color:var(--dim);opacity:.45;display:inline-flex;transform:scale(.8)">'+I.right+'</span></span>'
       +'<span class="mono" style="font-size:15px;font-weight:700;color:'+(rem<0?"var(--red)":"var(--text)")+'">'+fmt(rem)+'<span style="color:var(--dim);font-size:11px;font-weight:600"> left</span></span></div>'
       +'<div class="minibar" style="height:6px"><div style="width:'+pct+'%;background:'+barCol+'"></div></div>'
       +'<div class="mono" style="font-size:10.5px;color:var(--dim)">'+fmt(ga)+' of '+fmt(gp)+' spent</div>'
@@ -492,11 +492,12 @@ function openTxn(gid,iid){
   document.querySelectorAll("[data-txedit]").forEach(b=>b.onclick=()=>openTxnEdit(gid,iid,b.dataset.txedit));
 }
 
-function openTxnEdit(gid,iid,txid){
+function openTxnEdit(gid,iid,txid,back){
   const m=M();if(!m)return;
   const g=m.groups.find(x=>x.id===gid);const i=g&&g.items.find(x=>x.id===iid);
   const x=i&&(i.txns||[]).find(t=>t.id===txid);
   if(!x)return;
+  const ret=back||(()=>openTxn(gid,iid));
   sheet("Edit transaction",
     '<div style="display:flex;gap:10px"><div style="flex:1.1">'+fieldHTML("x_amt","Amount ($)",x.amount,"number","0")+'</div><div style="flex:1">'+fieldHTML("x_date","Date",x.date||"","date")+'</div></div>'
     +fieldHTML("x_note","Note (optional)",x.note||"","text","e.g. Publix")
@@ -506,11 +507,34 @@ function openTxnEdit(gid,iid,txid){
     const amt=parseFloat(document.getElementById("x_amt").value);
     if(isNaN(amt)||amt===0){toast("Enter an amount","var(--orange)");return;}
     x.amount=amt;x.date=document.getElementById("x_date").value||x.date;x.note=document.getElementById("x_note").value||"";
-    recalcItem(i);commit();openTxn(gid,iid);
+    recalcItem(i);commit();ret();
   };
   document.getElementById("xDel").onclick=()=>{
-    i.txns=(i.txns||[]).filter(t=>t.id!==txid);recalcItem(i);commit();openTxn(gid,iid);
+    i.txns=(i.txns||[]).filter(t=>t.id!==txid);recalcItem(i);commit();ret();
   };
+}
+
+function openGroupTxns(gid){
+  const m=M();if(!m)return;
+  const g=m.groups.find(x=>x.id===gid);
+  if(!g)return;
+  const gp=g.items.reduce((s,i)=>s+(i.planned||0),0);
+  const ga=g.items.reduce((s,i)=>s+(i.actual||0),0);
+  const rem=gp-ga;
+  let entries=[];
+  g.items.forEach(i=>(i.txns||[]).forEach(x=>entries.push({iid:i.id,item:i.name,x:x})));
+  entries.sort((a,b)=>(b.x.date||"").localeCompare(a.x.date||""));
+  const rows=entries.map(e=>
+    '<div class="irow" data-gtxedit="'+e.iid+':'+e.x.id+'" style="cursor:pointer">'
+    +'<div><div style="font-weight:700;font-size:13.5px" class="mono">'+fmtC(e.x.amount)+(e.x.note?' <span style="color:var(--dim);font-weight:400;font-family:inherit">· '+esc(e.x.note)+'</span>':'')+'</div>'
+    +'<div style="font-size:11px;margin-top:2px"><span style="color:var(--teal);font-weight:600">'+esc(e.item)+'</span><span class="mono" style="color:var(--dim)"> · '+esc(e.x.date||'')+'</span></div></div>'
+    +'<span style="color:var(--dim);opacity:.5;display:flex">'+I.right+'</span></div>'
+  ).join("")||'<div style="color:var(--dim);font-size:12.5px;padding:6px 0">No transactions in this category yet this month.</div>';
+  sheet(esc(g.name),
+    '<div class="mono" style="font-size:12.5px;color:'+(rem<0?"var(--red)":"var(--dim)")+';margin-bottom:14px">'+fmt(ga)+' spent of '+fmt(gp)+' · '+fmt(rem)+' left</div>'
+    +'<div class="label" style="margin-bottom:6px">'+monthName(mk)+' · '+entries.length+' transaction'+(entries.length!==1?'s':'')+'</div>'
+    +rows);
+  document.querySelectorAll("[data-gtxedit]").forEach(b=>b.onclick=()=>{const p=b.dataset.gtxedit.split(":");openTxnEdit(gid,p[0],p[1],()=>openGroupTxns(gid));});
 }
 
 function markPaid(gid,iid){
@@ -798,6 +822,7 @@ function bind(){
   });
   document.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>{mk=el.dataset.goto;tab="budget";render();});
   document.querySelectorAll("[data-txn]").forEach(el=>el.onclick=()=>{const p=el.dataset.txn.split(":");openTxn(p[0],p[1]);});
+  document.querySelectorAll("[data-gtxn]").forEach(el=>el.onclick=()=>openGroupTxns(el.dataset.gtxn));
   document.querySelectorAll("[data-paid]").forEach(el=>el.onclick=e=>{e.stopPropagation();const p=el.dataset.paid.split(":");markPaid(p[0],p[1]);});
   const pa=document.getElementById("payAllRec");if(pa)pa.onclick=payAllRecurring;
   const lt=document.getElementById("logTxn");if(lt)lt.onclick=openTxnPicker;
