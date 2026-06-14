@@ -1,0 +1,10 @@
+{
+  "appId": "com.twotonemotion.allotted",
+  "appName": "Allotted",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#0B0E10"
+  },
+  "backgroundColor": "#0B0E10"
+}

@@ -1,0 +1,50 @@
+workflows:
+  ios-allotted:
+    name: Allotted iOS Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: ASC_API_KEY   # name of the API key you add in Codemagic UI
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.twotonemotion.allotted
+      vars:
+        BUNDLE_ID: "com.twotonemotion.allotted"
+        APP_STORE_APPLE_ID: 0000000000   # <-- replace with the Apple ID number from App Store Connect once the app record exists
+      node: 20.x
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: npm install
+      - name: Add iOS platform
+        script: |
+          if [ ! -d "ios" ]; then npx cap add ios; fi
+      - name: Generate app icons & splash
+        script: npx capacitor-assets generate --ios || true
+      - name: Sync web assets into iOS project
+        script: npx cap sync ios
+      - name: Install CocoaPods deps
+        script: |
+          cd ios/App && pod install
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+      - name: Increment build number
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($BUILD_NUMBER + 1))
+      - name: Build ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "ios/App/App.xcworkspace" \
+            --scheme "App"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false   # flip to true when you're ready for the public review submission
