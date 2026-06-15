@@ -162,7 +162,7 @@ function blankMonth(){
 
 const CURRENT_SCHEMA=3;
 function defaultSettings(){
-  return {onboardingCompleted:false,paycheckMode:false,budgetMode:"monthly",billsView:"list",payFrequency:"biweekly",nextPayday:"",payAmount:0,monthlyIncome:0,savingsGoal:0,customDays:14,weeklyLimit:0};
+  return {onboardingCompleted:false,paycheckMode:false,budgetMode:"monthly",billsView:"upcoming",payFrequency:"biweekly",nextPayday:"",payAmount:0,monthlyIncome:0,savingsGoal:0,customDays:14,weeklyLimit:0};
 }
 let S={schemaVersion:CURRENT_SCHEMA,months:{},bills:[],debts:[],paychecks:[],moveHistory:[],settings:defaultSettings(),lastBackup:null,theme:"dark",lastLog:null};
 let mk=new Date().toISOString().slice(0,7); // selected month "YYYY-MM"
@@ -1565,8 +1565,17 @@ function unmarkBillPaidState(id,monthKey){
 }
 function toggleBillPaid(id){
   const b=(S.bills||[]).find(x=>x.id===id); if(!b)return;
-  const st=billStatus(b);
-  if(b.paid&&b.paid[st.key])unmarkBillPaidState(id,st.key); else markBillPaidState(id,new Date().toISOString().slice(0,10));
+  const key=mk||ymKey(todayLocal());
+  b.paid=b.paid||{};
+  if(b.paid[key]){
+    unmarkBillPaidState(id,key);
+  }else{
+    const now=todayLocal();
+    const currentKey=ymKey(now);
+    const p=monthParts(key);
+    const paidDate=(key===currentKey)?new Date().toISOString().slice(0,10):(key+"-"+String(clampDay(p.y,p.m,b.dueDay||1)).padStart(2,"0"));
+    markBillPaidState(id,paidDate);
+  }
   commit();
 }
 function findMatchingUnpaidBill(amt,note){
@@ -1597,8 +1606,76 @@ function billsCalendarHTML(bills){
   h+='</div>';
   return h;
 }
+function billStatusForMonth(b,monthKey){
+  const p=monthParts(monthKey||mk);
+  const key=(monthKey||mk);
+  const due=new Date(p.y,p.m,clampDay(p.y,p.m,b.dueDay||1));
+  const today=todayLocal();
+  const paidDate=b.paid&&b.paid[key];
+  if(paidDate){
+    const pd=parseYMD(paidDate);
+    return {state:"paid",bucket:"paid",label:pd?("Paid "+dateLabel(pd)):"Paid",color:"var(--teal)",bg:"var(--tealsoft)",due,key,days:dayDiff(today,due),paidDate};
+  }
+  const days=dayDiff(today,due);
+  const monthPast=key<ymKey(today);
+  if(monthPast||due<today)return {state:"overdue",bucket:"overdue",label:"Overdue",color:"var(--red)",bg:"var(--redsoft)",due,key,days};
+  if(days<=3)return {state:"soon",bucket:"soon",label:days===0?"Due today":"Due in "+days+"d",color:"var(--orange)",bg:"var(--orangesoft)",due,key,days};
+  if(days<=7)return {state:"week",bucket:"week",label:"This week",color:"var(--orange)",bg:"var(--orangesoft)",due,key,days};
+  return {state:"later",bucket:"later",label:"Due "+dateLabel(due),color:"var(--dim)",bg:"var(--inset)",due,key,days};
+}
+function billsUrgencyBuckets(bills){
+  const buckets={overdue:[],soon:[],week:[],later:[]};
+  bills.forEach(b=>{
+    const st=billStatusForMonth(b,mk);
+    if(st.state==="paid")return;
+    (buckets[st.bucket]||buckets.later).push({b,st});
+  });
+  Object.values(buckets).forEach(arr=>arr.sort((a,b)=>a.st.due-b.st.due));
+  return buckets;
+}
+function billRowHTML(b,st,paidView){
+  const auto=b.autopay?' <span style="font-size:10.5px;color:var(--teal);background:var(--tealsoft);padding:2px 6px;border-radius:99px">Autopay</span>':'';
+  const action=paidView?"Mark unpaid":"Mark paid";
+  const actionBg=paidView?"var(--inset)":"var(--tealsoft)";
+  const actionBorder=paidView?"var(--line)":"var(--tealb)";
+  const actionColor=paidView?"var(--dim)":"var(--teal)";
+  return '<div class="grow" data-billedit="'+b.id+'" style="align-items:center;gap:10px;min-height:58px">'
+    +'<div class="gn" style="display:flex;flex-direction:column;gap:4px;min-width:0">'
+    +'<span style="font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(b.name)+auto+'</span>'
+    +'<span style="display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap">'
+    +'<span style="font-size:10.5px;font-weight:800;color:'+st.color+';background:'+st.bg+';padding:2px 7px;border-radius:99px">'+st.label+'</span>'
+    +'<span style="font-size:11px;color:var(--dim)">'+dateLabel(st.due)+'</span>'
+    +'</span></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+    +'<button data-billpaid="'+b.id+'" style="background:'+actionBg+';border:1px solid '+actionBorder+';color:'+actionColor+';font-weight:800;font-size:11px;padding:7px 10px;border-radius:10px;display:flex;align-items:center;gap:4px;white-space:nowrap">'+(paidView?"Undo":I.check+" Pay")+'</button>'
+    +'<div class="gv">'+fmt(b.amount||0)+'</div>'
+    +'</div></div>';
+}
+function billsUpcomingHTML(bills){
+  const buckets=billsUrgencyBuckets(bills);
+  const block=(title,arr,empty,accent)=>{
+    if(!arr.length&&!empty)return "";
+    return '<div class="gcard" style="margin-bottom:14px">'
+      +'<div class="ghead"><div class="gname" style="color:'+(accent||"var(--text)")+'">'+title+'</div><span class="gtot">'+arr.length+'</span></div>'
+      +(arr.length?arr.map(x=>billRowHTML(x.b,x.st,false)).join(""):'<div style="padding:18px;color:var(--dim);font-size:13px;line-height:1.5">'+empty+'</div>')
+      +'</div>';
+  };
+  const total=Object.values(buckets).reduce((s,a)=>s+a.length,0);
+  if(!total)return '<div class="card" style="text-align:center;padding:28px 22px"><div style="font-weight:900;font-size:16px;margin-bottom:6px;color:var(--teal)">No unpaid bills left.</div><div style="font-size:13px;color:var(--dim);line-height:1.5">Paid bills will stay in the Paid view for this month.</div></div>';
+  return block("Overdue",buckets.overdue,null,"var(--red)")
+    +block("Due soon",buckets.soon,null,"var(--orange)")
+    +block("This week",buckets.week,null,"var(--orange)")
+    +block("Later this month",buckets.later,"No later bills this month.","var(--text)");
+}
+function billsPaidHTML(bills){
+  const paid=bills.map(b=>({b,st:billStatusForMonth(b,mk)})).filter(x=>x.st.state==="paid").sort((a,b)=>a.st.due-b.st.due);
+  return '<div class="gcard" style="margin-bottom:14px"><div class="ghead"><div class="gname">Paid this month</div><span class="gtot">'+paid.length+'</span></div>'
+    +(paid.length?paid.map(x=>billRowHTML(x.b,x.st,true)).join(""):'<div style="padding:20px;color:var(--dim);font-size:13px;line-height:1.5">Bills you mark paid this month will show here.</div>')
+    +'</div>';
+}
 function billsHTML(){
   syncBillsFromBudget(M());
+  if(S.settings.billsView==="calendar"||S.settings.billsView==="list")S.settings.billsView="upcoming";
   const bills=(S.bills||[]).slice().sort((a,b)=>(a.dueDay||0)-(b.dueDay||0));
   let h='<div class="narrow">';
   if(!bills.length){
@@ -1614,27 +1691,21 @@ function billsHTML(){
   }
   h+=warningCards("bills",M(),totals(M()));
   const totalMonthly=bills.reduce((s,b)=>s+(b.amount||0),0);
-  const unpaid=bills.filter(b=>billStatus(b).state!=="paid");
-  const unpaidTotal=unpaid.reduce((s,b)=>s+(b.amount||0),0);
+  const monthStats=bills.map(b=>({b,st:billStatusForMonth(b,mk)}));
+  const unpaid=monthStats.filter(x=>x.st.state!=="paid");
+  const unpaidTotal=unpaid.reduce((s,x)=>s+(x.b.amount||0),0);
   const bb=S.settings.paycheckMode?billsBeforePayday():null;
-  h+='<div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;text-align:center">'
-    +'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800">'+fmt(totalMonthly)+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Monthly</div></div>'
-    +'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800;color:'+(unpaidTotal>0?"var(--orange)":"var(--teal)")+'">'+fmt(unpaidTotal)+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Unpaid</div></div>'
-    +(bb?'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800;color:'+(bb.unpaid.length?"var(--orange)":"var(--teal)")+'">'+bb.unpaid.length+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Before payday</div></div>':'')
-    +'</div>';
-  h+='<div class="seg" style="margin-bottom:14px"><button data-billsview="list" style="'+(S.settings.billsView!=="calendar"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">List View</button><button data-billsview="calendar" style="'+(S.settings.billsView==="calendar"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Calendar View</button></div>';
+  const dueBeforePayday=bb?bb.unpaidTotal:0;
+  h+='<div class="card" style="margin-bottom:14px">'
+    +'<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px"><span style="color:var(--teal);display:flex">'+I.shield+'</span><div><div style="font-weight:900;font-size:15px">Bill money is locked</div><div style="font-size:12.5px;color:var(--dim);line-height:1.45;margin-top:2px">Protected bill money is not included in safe-to-spend.</div></div></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">'
+    +'<div style="background:var(--inset);border:1px solid var(--line);border-radius:15px;padding:12px 7px"><div class="mono" style="font-size:18px;font-weight:900;color:var(--teal)">'+fmt(totalMonthly)+'</div><div style="font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Locked</div></div>'
+    +'<div style="background:var(--inset);border:1px solid var(--line);border-radius:15px;padding:12px 7px"><div class="mono" style="font-size:18px;font-weight:900;color:'+(unpaidTotal>0?"var(--orange)":"var(--teal)")+'">'+fmt(unpaidTotal)+'</div><div style="font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Unpaid</div></div>'
+    +'<div style="background:var(--inset);border:1px solid var(--line);border-radius:15px;padding:12px 7px"><div class="mono" style="font-size:18px;font-weight:900;color:'+(dueBeforePayday>0?"var(--orange)":"var(--dim)")+'">'+fmt(dueBeforePayday)+'</div><div style="font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Before payday</div></div>'
+    +'</div></div>';
+  h+='<div class="seg" style="margin-bottom:14px"><button data-billsview="upcoming" style="'+(S.settings.billsView!=="paid"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Upcoming</button><button data-billsview="paid" style="'+(S.settings.billsView==="paid"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Paid</button></div>';
   h+='<button id="addBill" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Add a bill</button>';
-  if(S.settings.billsView==="calendar"){
-    h+=billsCalendarHTML(bills)+'</div>';
-    return h;
-  }
-  const listBlock=(title,arr,empty)=>'<div class="gcard" style="margin-bottom:14px"><div class="ghead"><div class="gname">'+title+'</div><span class="gtot">'+arr.length+'</span></div>'+(arr.length?arr.map(b=>{
-    const st=billStatus(b);
-    return '<div class="grow" data-billedit="'+b.id+'" style="align-items:center"><div class="gn" style="display:flex;flex-direction:column;gap:3px"><span>'+esc(b.name)+(b.autopay?' <span style="font-size:10.5px;color:var(--teal);background:var(--tealsoft);padding:2px 6px;border-radius:99px">Autopay</span>':'')+'</span><span style="display:inline-flex;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:'+st.color+';background:'+st.bg+';padding:2px 7px;border-radius:99px">'+st.label+'</span></span></div><div style="display:flex;align-items:center;gap:8px"><button data-billpaid="'+b.id+'" style="background:'+(st.state==="paid"?"var(--inset)":"var(--tealsoft)")+';border:1px solid '+(st.state==="paid"?"var(--line)":"var(--tealb)")+';color:'+(st.state==="paid"?"var(--dim)":"var(--teal)")+';font-weight:800;font-size:11px;padding:6px 10px;border-radius:9px;display:flex;align-items:center;gap:4px">'+(st.state==="paid"?"Undo":I.check+" Pay")+'</button><div class="gv">'+fmt(b.amount||0)+'</div></div></div>';
-  }).join(""):'<div style="padding:18px;color:var(--dim);font-size:13px">'+empty+'</div>')+'</div>';
-  const paid=bills.filter(b=>billStatus(b).state==="paid");
-  h+=listBlock("Unpaid",unpaid,"No unpaid bills for this month.");
-  h+=listBlock("Paid",paid,"Paid bills will appear here after you mark them paid.");
+  h+=(S.settings.billsView==="paid")?billsPaidHTML(bills):billsUpcomingHTML(bills);
   h+='</div>';
   return h;
 }
