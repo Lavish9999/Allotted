@@ -101,6 +101,19 @@ button:active{transform:scale(.97)}
 .seg button{flex:1;border:none;border-radius:10px;padding:9px 0;font-size:13px;font-weight:800;background:transparent;color:var(--dim)}
 svg text{font-family:ui-monospace,'SF Mono',Menlo,monospace}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.ob-sub{color:var(--dim);font-size:13.5px;line-height:1.6;margin-bottom:18px}
+.ob-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ob-chip{background:var(--inset);border:1px solid var(--line);color:var(--text);padding:9px 14px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer}
+.ob-chip.on{background:var(--tealsoft);border-color:var(--tealb);color:var(--teal)}
+.ob-in{background:var(--inputbg);border:1px solid var(--line);border-radius:11px;color:var(--text);padding:11px 12px;font-size:14px;outline:none}
+.ob-in:focus{border-color:var(--tealb)}
+.ob-billrow{display:flex;gap:7px;align-items:center;margin-bottom:8px}
+.ob-del{background:var(--inset);border:none;color:var(--dim);border-radius:9px;padding:8px;display:flex;flex-shrink:0;cursor:pointer}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;padding:13px 14px;font-size:14px;font-weight:600;color:var(--text)}
+.toggle-row input[type=checkbox]{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:99px;background:var(--track);position:relative;flex-shrink:0;cursor:pointer;transition:background .18s}
+.toggle-row input[type=checkbox]:checked{background:var(--teal)}
+.toggle-row input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:99px;background:#fff;transition:transform .18s}
+.toggle-row input[type=checkbox]:checked::after{transform:translateX(18px)}
 </style>
 </head>
 <body>
@@ -141,14 +154,31 @@ function blankMonth(){
   };
 }
 
-let S={months:{},lastBackup:null,theme:"dark",lastLog:null};
+const CURRENT_SCHEMA=2;
+function defaultSettings(){
+  return {onboardingCompleted:false,paycheckMode:false,payFrequency:"biweekly",nextPayday:"",payAmount:0,monthlyIncome:0,savingsGoal:0,customDays:14};
+}
+let S={schemaVersion:CURRENT_SCHEMA,months:{},bills:[],debts:[],settings:defaultSettings(),lastBackup:null,theme:"dark",lastLog:null};
 let mk=new Date().toISOString().slice(0,7); // selected month "YYYY-MM"
-let tab="budget";
+let tab="dashboard";
+
+// merge a stored/backup object into live state without dropping known keys
+function adoptState(d){
+  if(!d||typeof d!=="object")return;
+  if(d.months)S.months=d.months;
+  if(Array.isArray(d.bills))S.bills=d.bills;
+  if(Array.isArray(d.debts))S.debts=d.debts;
+  if(d.settings&&typeof d.settings==="object")S.settings={...defaultSettings(),...d.settings};
+  if(d.lastBackup!==undefined)S.lastBackup=d.lastBackup;
+  if(d.theme)S.theme=d.theme;
+  if(d.lastLog)S.lastLog=d.lastLog;
+  if(typeof d.schemaVersion==="number")S.schemaVersion=d.schemaVersion;
+}
 
 function load(){
   try{
     const raw=localStorage.getItem(KEY);
-    if(raw){const d=JSON.parse(raw);if(d.months)S.months=d.months;if(d.lastBackup!==undefined)S.lastBackup=d.lastBackup;if(d.theme)S.theme=d.theme;if(d.lastLog)S.lastLog=d.lastLog;}
+    if(raw)adoptState(JSON.parse(raw));
   }catch(e){}
   applyTheme();
   migrate();
@@ -165,8 +195,9 @@ const M=()=>S.months[mk]||null;
 
 // keep an item's cached spent total in sync with its transaction list
 function recalcItem(i){i.actual=(i.txns||[]).reduce((s,x)=>s+(parseFloat(x.amount)||0),0);}
-// upgrade older data: turn a bare "actual" number into a transaction list
+// upgrade older data: turn a bare "actual" number into a transaction list, seed v2 keys
 function migrate(){
+  // schema v1 groundwork: ensure every item has a txn list
   Object.keys(S.months).forEach(k=>{
     const m=S.months[k];if(!m||!m.groups)return;
     m.groups.forEach(g=>g.items.forEach(i=>{
@@ -176,6 +207,13 @@ function migrate(){
       recalcItem(i);
     }));
   });
+  // schema v2: first-class bills/debts + settings (paycheck, onboarding)
+  if(!Array.isArray(S.bills))S.bills=[];
+  if(!Array.isArray(S.debts))S.debts=[];
+  S.settings=(S.settings&&typeof S.settings==="object")?{...defaultSettings(),...S.settings}:defaultSettings();
+  // anyone who already has budget data is an existing user — never show them onboarding
+  if(Object.keys(S.months).length>0)S.settings.onboardingCompleted=true;
+  S.schemaVersion=CURRENT_SCHEMA;
 }
 
 // most recent month at or before key k that actually has data
@@ -220,6 +258,14 @@ function toast(msg,color){
   document.body.appendChild(t);setTimeout(()=>t.remove(),3500);
 }
 const I={
+  home:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  receipt:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>',
+  grid:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>',
+  pencil:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>',
+  card:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
+  wallet:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>',
+  back:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+  shield:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/></svg>',
   gear:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
   plus:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   left:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
@@ -302,15 +348,27 @@ function render(){
   let html=headerHTML(t,m);
   html+='<div class="wrap fade-up">';
   if(noData) html+=welcomeHTML();
+  else if(tab==="dashboard") html+=dashboardHTML(m,t);
   else if(tab==="budget") html+=m?budgetHTML(m,t):emptyMonthHTML();
   else if(tab==="track") html+=m?trackHTML(m,t):emptyMonthHTML();
-  else html+=yearHTML();
+  else if(tab==="bills") html+=billsHTML();
+  else if(tab==="more") html+=moreHTML();
+  else if(tab==="debt") html+=debtsHTML();
+  else if(tab==="weekly") html+=weeklyReviewHTML();
+  else if(tab==="year") html+=yearHTML();
+  else html+=dashboardHTML(m,t);
   html+='</div>';
-  if(!noData) html+='<div class="nav"><div class="nav-inner">'
-    +'<button data-tab="budget" class="'+(tab==="budget"?"on":"")+'">'+I.cal+(tab==="budget"?'<span>Budget</span>':'')+'</button>'
-    +'<button data-tab="track" class="'+(tab==="track"?"on":"")+'">'+I.list+(tab==="track"?'<span>Track</span>':'')+'</button>'
-    +'<button data-tab="year" class="'+(tab==="year"?"on":"")+'">'+I.chart+(tab==="year"?'<span>Year</span>':'')+'</button>'
+  if(!noData){
+    const on=x=>tab===x?"on":"";
+    const moreActive=["more","debt","weekly","year"].includes(tab);
+    html+='<div class="nav"><div class="nav-inner">'
+    +'<button data-tab="dashboard" class="'+on("dashboard")+'">'+I.home+(tab==="dashboard"?'<span>Home</span>':'')+'</button>'
+    +'<button data-tab="budget" class="'+on("budget")+'">'+I.cal+(tab==="budget"?'<span>Budget</span>':'')+'</button>'
+    +'<button data-tab="track" class="'+on("track")+'">'+I.list+(tab==="track"?'<span>Track</span>':'')+'</button>'
+    +'<button data-tab="bills" class="'+on("bills")+'">'+I.receipt+(tab==="bills"?'<span>Bills</span>':'')+'</button>'
+    +'<button data-tab="more" class="'+(moreActive?"on":"")+'">'+I.grid+(moreActive?'<span>More</span>':'')+'</button>'
     +'</div></div>';
+  }
   document.getElementById("app").innerHTML=html;
   bind();
   animateHero();
@@ -322,10 +380,132 @@ function welcomeHTML(){
     +'<div style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px">Allotted</div>'
     +'<div style="color:var(--teal);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:20px">Give every dollar a job</div>'
     +'<div style="color:var(--dim);font-size:13.5px;line-height:1.65;margin-bottom:22px">At the start of each month, give every dollar of income a job. Then track what you spend and watch each category drain down. Everything stays on this device.</div>'
-    +'<button id="wStart" class="btn btn-teal" style="margin-bottom:10px">Start with a starter budget</button>'
-    +'<button id="wBlank" class="btn btn-ghost" style="margin-bottom:10px;color:var(--text)">Start from scratch</button>'
+    +'<button id="wOnboard" class="btn btn-teal" style="margin-bottom:10px">Let\u2019s build your first budget</button>'
+    +'<button id="wBlank" class="btn btn-ghost" style="margin-bottom:10px;color:var(--text)">Skip \u2014 start from scratch</button>'
     +'<button id="wImport" class="btn btn-ghost" style="color:var(--text)">Restore from a backup</button>'
     +'</div>';
+}
+
+// ================= onboarding (first-time setup) =================
+let OB=null;
+const OB_BILLS=[{name:"Rent / Mortgage",day:1},{name:"Car payment",day:5},{name:"Car insurance",day:10},{name:"Phone",day:15},{name:"Internet",day:20},{name:"Electric",day:25}];
+const OB_CATS=["Groceries","Gas","Eating out","Fun","Clothes","Household","Kids","Health"];
+
+function startOnboarding(){
+  OB={step:1,income:"",freq:"biweekly",payday:"",pay:"",bills:[],cats:["Groceries","Gas","Eating out","Fun"],goal:""};
+  obRender();
+}
+function obNav(back,lastLabel){
+  return '<div style="display:flex;gap:10px;margin-top:20px">'
+    +(back?'<button id="obBack" class="btn btn-ghost" style="flex:0 0 auto;width:auto;padding:14px 22px;color:var(--text)">Back</button>':'')
+    +'<button id="obNext" class="btn btn-teal" style="flex:1 1 auto;width:auto;min-width:0">'+(lastLabel||"Next")+'</button></div>'
+    +'<button id="obSkip" class="btn btn-ghost" style="color:var(--dim);margin-top:10px;font-size:13px">Skip setup</button>';
+}
+function obIncome(){
+  return '<div class="ob-sub">Start with your income. About how much money comes in each month, after taxes?</div>'
+    +fieldHTML("obIncome","Monthly take-home income",OB.income,"number","e.g. 3200","A rough number is fine \u2014 you can change it later.")
+    +obNav(false);
+}
+function obPay(){
+  const opts=[["weekly","Weekly"],["biweekly","Every 2 weeks"],["semimonthly","Twice a month"],["monthly","Monthly"],["custom","Custom"]];
+  const chips=opts.map(o=>'<button data-obfreq="'+o[0]+'" class="ob-chip'+(OB.freq===o[0]?" on":"")+'">'+o[1]+'</button>').join("");
+  return '<div class="ob-sub">This powers the \u201cwhat can I spend until payday\u201d view. Not sure? Skip the dates for now.</div>'
+    +'<div class="ob-chips" style="margin-bottom:16px">'+chips+'</div>'
+    +fieldHTML("obPayday","Next payday",OB.payday,"date","")
+    +fieldHTML("obPay","Amount per paycheck (optional)",OB.pay,"number","e.g. 1600")
+    +obNav(true);
+}
+function obBills(){
+  const have=OB.bills.map(b=>(b.name||"").toLowerCase());
+  const sugg=OB_BILLS.filter(b=>!have.includes(b.name.toLowerCase()))
+    .map(b=>'<button data-obaddbill="'+esc(b.name)+'|'+b.day+'" class="ob-chip">+ '+esc(b.name)+'</button>').join("");
+  const rows=OB.bills.map((b,i)=>
+    '<div class="ob-billrow">'
+    +'<input id="obBn'+i+'" value="'+esc(b.name||"")+'" placeholder="Bill name" class="ob-in" style="flex:2;min-width:0">'
+    +'<input id="obBa'+i+'" value="'+esc(b.amount||"")+'" inputmode="decimal" placeholder="$" class="ob-in" style="flex:1;min-width:0">'
+    +'<input id="obBd'+i+'" value="'+esc(b.day||"")+'" inputmode="numeric" placeholder="Day" class="ob-in" style="width:52px;flex:0 0 auto">'
+    +'<button data-obdelbill="'+i+'" class="ob-del">'+I.x+'</button></div>').join("");
+  return '<div class="ob-sub">Add bills you know are coming \u2014 rent, car payment, phone, subscriptions. Set the day of the month each is due.</div>'
+    +(sugg?'<div class="ob-chips" style="margin-bottom:14px">'+sugg+'</div>':'')
+    +(rows||'<div style="color:var(--dim);font-size:13px;margin-bottom:8px">No bills added yet.</div>')
+    +'<button id="obAddBill" class="addline" style="margin-top:6px">'+I.plus+' Add a bill</button>'
+    +obNav(true);
+}
+function obCats(){
+  const chips=OB_CATS.map(c=>'<button data-obcat="'+esc(c)+'" class="ob-chip'+(OB.cats.includes(c)?" on":"")+'">'+esc(c)+'</button>').join("");
+  const custom=OB.cats.filter(c=>!OB_CATS.includes(c)).map(c=>'<button data-obcat="'+esc(c)+'" class="ob-chip on">'+esc(c)+' &times;</button>').join("");
+  return '<div class="ob-sub">Add spending categories like groceries, gas, food, clothes, or fun. Tap to add or remove.</div>'
+    +'<div class="ob-chips" style="margin-bottom:12px">'+chips+custom+'</div>'
+    +'<div style="display:flex;gap:8px"><input id="obNewCat" placeholder="Add your own" class="ob-in" style="flex:1;min-width:0"><button id="obAddCat" class="btn btn-ghost" style="width:auto;flex:0 0 auto;padding:11px 18px;color:var(--text)">Add</button></div>'
+    +obNav(true);
+}
+function obGoal(){
+  return '<div class="ob-sub">Want to set money aside each month? Add a savings goal, or skip it.</div>'
+    +fieldHTML("obGoal","Monthly savings goal (optional)",OB.goal,"number","e.g. 200","")
+    +'<div style="font-size:12px;color:var(--dim);margin-top:8px;line-height:1.55">When you finish, Allotted builds your first month from these answers \u2014 income, bills, and categories ready to go.</div>'
+    +obNav(true,"Done \u2014 build my budget");
+}
+function obRender(){
+  const dots='<div style="display:flex;gap:6px;justify-content:center;margin-bottom:18px">'
+    +[1,2,3,4,5].map(i=>'<span style="width:7px;height:7px;border-radius:99px;background:'+(i<=OB.step?'var(--teal)':'var(--line)')+'"></span>').join("")+'</div>';
+  let title="",body="";
+  if(OB.step===1){title="Let\u2019s build your first budget";body=obIncome();}
+  else if(OB.step===2){title="When do you get paid?";body=obPay();}
+  else if(OB.step===3){title="Add your bills";body=obBills();}
+  else if(OB.step===4){title="What do you spend on?";body=obCats();}
+  else{title="One last thing";body=obGoal();}
+  sheet(title,dots+body);
+  obWire();
+}
+// pull the current step's inputs into OB before any navigation/re-render
+function obReadStep(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value:undefined;};
+  if(OB.step===1){const v=g("obIncome");if(v!==undefined)OB.income=v;}
+  else if(OB.step===2){const a=g("obPayday");if(a!==undefined)OB.payday=a;const b=g("obPay");if(b!==undefined)OB.pay=b;}
+  else if(OB.step===3){OB.bills.forEach((bl,i)=>{const n=g("obBn"+i),am=g("obBa"+i),dy=g("obBd"+i);if(n!==undefined)bl.name=n;if(am!==undefined)bl.amount=am;if(dy!==undefined)bl.day=dy;});}
+  else if(OB.step===5){const v=g("obGoal");if(v!==undefined)OB.goal=v;}
+}
+function obNext(){obReadStep();if(OB.step<5){OB.step++;obRender();}else obFinish();}
+function obBack(){obReadStep();if(OB.step>1){OB.step--;obRender();}}
+function obSkip(){closeModal();OB=null;S.months[mk]=blankMonth();S.settings.onboardingCompleted=true;tab="dashboard";commit();}
+function obWire(){
+  const nx=document.getElementById("obNext");if(nx)nx.onclick=obNext;
+  const bk=document.getElementById("obBack");if(bk)bk.onclick=obBack;
+  const sk=document.getElementById("obSkip");if(sk)sk.onclick=obSkip;
+  document.querySelectorAll("[data-obfreq]").forEach(b=>b.onclick=()=>{obReadStep();OB.freq=b.dataset.obfreq;obRender();});
+  document.querySelectorAll("[data-obaddbill]").forEach(b=>b.onclick=()=>{obReadStep();const p=b.dataset.obaddbill.split("|");OB.bills.push({name:p[0],amount:"",day:parseInt(p[1])||1});obRender();});
+  const ab=document.getElementById("obAddBill");if(ab)ab.onclick=()=>{obReadStep();OB.bills.push({name:"",amount:"",day:""});obRender();};
+  document.querySelectorAll("[data-obdelbill]").forEach(b=>b.onclick=()=>{obReadStep();OB.bills.splice(parseInt(b.dataset.obdelbill),1);obRender();});
+  document.querySelectorAll("[data-obcat]").forEach(b=>b.onclick=()=>{const c=b.dataset.obcat;OB.cats=OB.cats.includes(c)?OB.cats.filter(x=>x!==c):OB.cats.concat(c);obRender();});
+  const ac=document.getElementById("obAddCat");if(ac)ac.onclick=()=>{const e=document.getElementById("obNewCat");const v=(e?e.value:"").trim();if(v&&!OB.cats.includes(v))OB.cats.push(v);obRender();};
+}
+function obFinish(){
+  obReadStep();
+  const income=parseFloat(OB.income)||0, goal=parseFloat(OB.goal)||0;
+  const cleanBills=OB.bills.filter(b=>b.name&&b.name.trim());
+  // build the first month from the answers
+  const month={
+    income:[{id:nid(),name:"Take-home pay",amount:income}],
+    savings:[{id:nid(),name:"Savings",amount:goal}],
+    groups:[]
+  };
+  const billItems=cleanBills.map(b=>({id:nid(),name:b.name.trim(),planned:parseFloat(b.amount)||0,actual:0,txns:[],recurring:true}));
+  if(billItems.length)month.groups.push({id:nid(),name:"Bills",items:billItems});
+  const catItems=OB.cats.filter(c=>c&&c.trim()).map(c=>({id:nid(),name:c.trim(),planned:0,actual:0,txns:[],recurring:false}));
+  month.groups.push({id:nid(),name:"Spending",items:catItems});
+  month.groups.push({id:nid(),name:"Other",items:[]});
+  S.months[mk]=month;
+  // first-class bills list (kept separate from envelopes, per product decision)
+  S.bills=cleanBills.map(b=>({id:nid(),name:b.name.trim(),amount:parseFloat(b.amount)||0,dueDay:Math.min(31,Math.max(1,parseInt(b.day)||1)),category:"",recurring:true,notes:"",paid:{}}));
+  // settings
+  S.settings.onboardingCompleted=true;
+  S.settings.monthlyIncome=income;
+  S.settings.savingsGoal=goal;
+  S.settings.payFrequency=OB.freq||"biweekly";
+  S.settings.nextPayday=OB.payday||"";
+  S.settings.payAmount=parseFloat(OB.pay)||0;
+  closeModal();OB=null;tab="dashboard";commit();
+  toast("Done \u2014 your first budget is ready");
 }
 
 let heroState={key:null,val:null};
@@ -374,8 +554,8 @@ function headerHTML(t,m){
     +'<button id="mpick" style="font-weight:800;font-size:16px;min-width:150px;text-align:center;background:none;border:none;color:var(--text);padding:5px 6px;border-radius:9px;font-family:inherit;letter-spacing:-.01em">'+monthName(mk)+'</button>'
     +'<button data-mnav="1" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">'+I.right+'</button></div>'
     +'<button id="settingsBtn" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:34px;height:34px;display:flex;align-items:center;justify-content:center">'+I.gear+'</button></div>'
-    +(m?heroBlockHTML(t)
-      :'<div style="color:var(--dim);font-size:13px">No budget for this month yet.</div>')
+    +(((tab==="budget"||tab==="track"))?(m?heroBlockHTML(t)
+      :'<div style="color:var(--dim);font-size:13px">No budget for this month yet.</div>'):'')
     +'</div></div>';
 }
 
@@ -532,25 +712,28 @@ function trackHTML(m,t){
     if(!g.items.length)return;
     const gp=g.items.reduce((s,i)=>s+(i.planned||0),0);
     const ga=g.items.reduce((s,i)=>s+(i.actual||0),0);
-    const rem=gp-ga;
-    const pct=gp>0?Math.min(ga/gp*100,100):0;
-    const over=ga>gp+0.5;
-    const barCol=over?"var(--red)":(ga>gp*0.85?"var(--orange)":"var(--teal)");
+    const gc=g.items.reduce((s,i)=>s+(i.rollover?rolloverCarry(mk,g.name,i.name):0),0);
+    const avail=gp+gc;
+    const rem=avail-ga;
+    const pct=avail>0?Math.min(ga/avail*100,100):0;
+    const over=ga>avail+0.5;
+    const barCol=over?"var(--red)":(ga>avail*0.85?"var(--orange)":"var(--teal)");
     h+='<div class="gcard">'
       +'<div class="ghead" data-gtxn="'+g.id+'" style="flex-direction:column;align-items:stretch;gap:8px;padding:11px 13px;cursor:pointer">'
       +'<div style="display:flex;justify-content:space-between;align-items:baseline">'
       +'<span class="gname" style="display:inline-flex;align-items:center;gap:5px">'+esc(g.name)+'<span style="color:var(--dim);opacity:.45;display:inline-flex;transform:scale(.8)">'+I.right+'</span></span>'
       +'<span class="mono" style="font-size:15px;font-weight:700;color:'+(rem<0?"var(--red)":"var(--text)")+'">'+fmt(rem)+'<span style="color:var(--dim);font-size:11px;font-weight:600"> left</span></span></div>'
       +'<div class="minibar" style="height:6px"><div style="width:'+pct+'%;background:'+barCol+'"></div></div>'
-      +'<div class="mono" style="font-size:10.5px;color:var(--dim)">'+fmt(ga)+' of '+fmt(gp)+' spent</div>'
+      +'<div class="mono" style="font-size:10.5px;color:var(--dim)">'+fmt(ga)+' of '+fmt(avail)+' spent'+(Math.abs(gc)>0.5?' · '+(gc>0?'+':'')+fmt(gc)+' rolled over':'')+'</div>'
       +'</div>';
     g.items.forEach(i=>{
-      const irem=(i.planned||0)-(i.actual||0);
+      const carry=i.rollover?rolloverCarry(mk,g.name,i.name):0;
+      const irem=(i.planned||0)+carry-(i.actual||0);
       const n=(i.txns||[]).length;
       const showPay=i.recurring&&irem>0.5;
       h+='<div class="grow" data-txn="'+g.id+':'+i.id+'">'
-        +'<div class="gn">'+esc(i.name)+(i.recurring?' <span style="color:var(--dim);opacity:.6;vertical-align:middle">'+I.repeat+'</span>':'')
-        +'<div class="gspent" style="color:var(--dim)">'+fmt(i.actual||0)+' spent'+(n?' · '+n+' txn'+(n>1?'s':''):'')+'</div></div>'
+        +'<div class="gn">'+esc(i.name)+(i.recurring?' <span style="color:var(--dim);opacity:.6;vertical-align:middle">'+I.repeat+'</span>':'')+(i.rollover?' <span style="color:var(--purple);opacity:.8;vertical-align:middle">'+I.up+'</span>':'')
+        +'<div class="gspent" style="color:var(--dim)">'+fmt(i.actual||0)+' spent'+(n?' · '+n+' txn'+(n>1?'s':''):'')+(Math.abs(carry)>0.5?' · '+(carry>0?'+':'')+fmt(carry)+' rolled':'')+'</div></div>'
         +'<div style="display:flex;align-items:center;gap:8px">'
         +(showPay?'<button data-paid="'+g.id+':'+i.id+'" style="background:var(--tealsoft);border:1px solid var(--tealb);color:var(--teal);font-weight:800;font-size:11px;padding:5px 9px;border-radius:9px;display:flex;align-items:center;gap:4px">'+I.check+' Pay</button>':'')
         +'<div class="gv" style="color:'+(irem<0?"var(--red)":"var(--text)")+'">'+fmt(irem)+'</div></div></div>';
@@ -682,13 +865,17 @@ function openTxnPicker(){
     if(lg){defGid=lg.id;const li=lg.items.find(x=>x.id===S.lastLog.iid);if(li)defIid=li.id;}
   }
   const lineOpts=(gid,selIid)=>{const g=m.groups.find(x=>x.id===gid);return (g?g.items:[]).map((i,ii)=>'<option value="'+i.id+'"'+((selIid?i.id===selIid:ii===0)?' selected':'')+'>'+esc(i.name)+'</option>').join("");};
+  const rn=recentNotes(6);
+  const chipRow=rn.length?'<div class="ob-chips" id="p_chips" style="margin:-4px 0 14px">'+rn.map(x=>'<button type="button" data-pnote="'+esc(x)+'" class="ob-chip" style="padding:7px 12px;font-size:12.5px">'+esc(x)+'</button>').join("")+'</div>':'';
   sheet("Log a transaction",
     '<label class="field"><span>Category</span><select id="p_cat" style="'+sel+'">'+cats.map(g=>'<option value="'+g.id+'"'+(g.id===defGid?' selected':'')+'>'+esc(g.name)+'</option>').join("")+'</select></label>'
     +'<label class="field"><span>Line</span><select id="p_line" style="'+sel+'">'+lineOpts(defGid,defIid)+'</select></label>'
     +'<div style="display:flex;gap:10px"><div style="flex:1.1">'+fieldHTML("p_amt","Amount ($)","","number","0")+'</div><div style="flex:1">'+fieldHTML("p_date","Date","","date")+'</div></div>'
     +fieldHTML("p_note","Note (optional)","","text","e.g. Publix")
+    +chipRow
     +'<button id="pSave" class="btn btn-teal">Log transaction</button>');
   document.getElementById("p_date").value=today;
+  document.querySelectorAll("[data-pnote]").forEach(b=>b.onclick=()=>{document.getElementById("p_note").value=b.dataset.pnote;});
   const catEl=document.getElementById("p_cat");
   catEl.onchange=()=>{document.getElementById("p_line").innerHTML=lineOpts(catEl.value,null);};
   document.getElementById("pSave").onclick=()=>{
@@ -737,7 +924,7 @@ function donutHTML(m){
 
 function yearHTML(){
   const year=mk.slice(0,4);
-  let h='<div class="narrow"><div class="label" style="margin-bottom:12px">'+year+' at a glance</div>';
+  let h='<div class="narrow">'+moreBackBtn("Year view")+'<div class="label" style="margin-bottom:12px">'+year+' at a glance</div>';
   const keys=[];for(let i=1;i<=12;i++)keys.push(year+"-"+String(i).padStart(2,"0"));
   const maxInc=Math.max(...keys.map(k=>totals(S.months[k]).income),1);
   let yInc=0,ySav=0,ySpent=0;
@@ -782,18 +969,24 @@ function openEditEntry(kind,gid,iid){
     fieldHTML("e_name","Name",item.name)
     +(isSpend
       ?fieldHTML("e_planned","Planned ($)",item.planned,"number","0","Log spending from the Track tab")
-       +'<button id="e_rec" type="button" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:13px;color:var(--text);font-size:14px"><span style="display:flex;align-items:center;gap:8px">'+I.repeat+' Recurring monthly bill</span><span id="e_recState" style="font-weight:800;color:'+(item.recurring?'var(--teal)':'var(--dim)')+'">'+(item.recurring?'ON':'OFF')+'</span></button>'
+       +'<button id="e_rec" type="button" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:10px;color:var(--text);font-size:14px"><span style="display:flex;align-items:center;gap:8px">'+I.repeat+' Recurring monthly bill</span><span id="e_recState" style="font-weight:800;color:'+(item.recurring?'var(--teal)':'var(--dim)')+'">'+(item.recurring?'ON':'OFF')+'</span></button>'
+       +'<button id="e_roll" type="button" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:4px;color:var(--text);font-size:14px"><span style="display:flex;align-items:center;gap:8px">'+I.up+' Roll over unused money</span><span id="e_rollState" style="font-weight:800;color:'+(item.rollover?'var(--teal)':'var(--dim)')+'">'+(item.rollover?'ON':'OFF')+'</span></button>'
+       +'<div style="font-size:11px;color:var(--dim);margin-bottom:13px;line-height:1.5">On: leftover carries into next month (good for car maintenance, Christmas, clothes). Off: resets each month (groceries, gas, fun).</div>'
       :fieldHTML("e_amount","Amount ($)",item.amount,"number"))
     +'<button id="eSave" class="btn btn-teal" style="margin-bottom:10px">Save</button>'
     +'<button id="eDel" class="btn" style="background:var(--redsoft);border:1px solid rgba(248,113,113,.3);color:var(--red);font-size:13.5px">Delete line</button>');
   let recOn=!!item.recurring;
   const recBtn=document.getElementById("e_rec");
   if(recBtn)recBtn.onclick=()=>{recOn=!recOn;const s=document.getElementById("e_recState");s.textContent=recOn?'ON':'OFF';s.style.color=recOn?'var(--teal)':'var(--dim)';};
+  let rollOn=!!item.rollover;
+  const rollBtn=document.getElementById("e_roll");
+  if(rollBtn)rollBtn.onclick=()=>{rollOn=!rollOn;const s=document.getElementById("e_rollState");s.textContent=rollOn?'ON':'OFF';s.style.color=rollOn?'var(--teal)':'var(--dim)';};
   document.getElementById("eSave").onclick=()=>{
     item.name=document.getElementById("e_name").value||item.name;
     if(isSpend){
       item.planned=parseFloat(document.getElementById("e_planned").value)||0;
       item.recurring=recOn;
+      item.rollover=rollOn;
     }else{
       item.amount=parseFloat(document.getElementById("e_amount").value)||0;
     }
@@ -904,6 +1097,411 @@ function openReorder(){
   wire();
 }
 
+// ================= v2 features: paycheck, bills, dashboard, debts, review =================
+function todayLocal(){const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate());}
+function parseYMD(s){if(!s)return null;const p=String(s).split("-").map(Number);if(p.length<3||!p[0])return null;return new Date(p[0],p[1]-1,p[2]);}
+function ymKey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
+function dayDiff(a,b){return Math.round((b-a)/86400000);}
+function clampDay(y,m,day){return Math.min(day||1,daysInMonth(y,m));}
+function dateLabel(d){return d.toLocaleDateString("en-US",{month:"short",day:"numeric"});}
+
+// --- paycheck engine ---
+const PERIODS_PER_MONTH={weekly:4.345,biweekly:2.17,semimonthly:2,monthly:1,custom:30/14};
+function nextPaydayDate(){
+  const s=S.settings; if(!s.payFrequency||!s.nextPayday)return null;
+  const anchor=parseYMD(s.nextPayday); if(!anchor)return null;
+  const today=todayLocal();
+  let d=new Date(anchor);
+  const step=()=>{
+    if(s.payFrequency==="weekly")d.setDate(d.getDate()+7);
+    else if(s.payFrequency==="biweekly")d.setDate(d.getDate()+14);
+    else if(s.payFrequency==="custom")d.setDate(d.getDate()+(parseInt(s.customDays)||14));
+    else if(s.payFrequency==="monthly")d.setMonth(d.getMonth()+1);
+    else if(s.payFrequency==="semimonthly")d.setDate(d.getDate()+15);
+  };
+  let guard=0;
+  while(d<today&&guard<800){step();guard++;}
+  return d;
+}
+function paydayInfo(){
+  const next=nextPaydayDate(); if(!next)return null;
+  const today=todayLocal();
+  const s=S.settings;
+  let prev=new Date(next);
+  if(s.payFrequency==="weekly")prev.setDate(prev.getDate()-7);
+  else if(s.payFrequency==="biweekly")prev.setDate(prev.getDate()-14);
+  else if(s.payFrequency==="custom")prev.setDate(prev.getDate()-(parseInt(s.customDays)||14));
+  else if(s.payFrequency==="monthly")prev.setMonth(prev.getMonth()-1);
+  else if(s.payFrequency==="semimonthly")prev.setDate(prev.getDate()-15);
+  const start=prev<today?today:prev; // period we care about starts no earlier than today's paycheck window
+  return {next,prev,daysUntil:Math.max(0,dayDiff(today,next)),periodStart:prev,today};
+}
+// every bill occurrence (paid or not) with a due date inside [from, to]
+function billOccurrencesBetween(from,to){
+  const out=[];
+  (S.bills||[]).forEach(b=>{
+    // check the months spanned by the window
+    let y=from.getFullYear(),mo=from.getMonth();
+    const endY=to.getFullYear(),endMo=to.getMonth();
+    let guard=0;
+    while((y<endY||(y===endY&&mo<=endMo))&&guard<24){
+      const dd=clampDay(y,mo,b.dueDay);
+      const occ=new Date(y,mo,dd);
+      if(occ>=from&&occ<=to){
+        const key=y+"-"+String(mo+1).padStart(2,"0");
+        out.push({bill:b,date:occ,monthKey:key,paid:!!(b.paid&&b.paid[key])});
+      }
+      mo++; if(mo>11){mo=0;y++;} guard++;
+    }
+  });
+  return out.sort((a,b)=>a.date-b.date);
+}
+function billsBeforePayday(){
+  const pi=paydayInfo(); if(!pi)return null;
+  const occ=billOccurrencesBetween(pi.today,pi.next);
+  const unpaid=occ.filter(o=>!o.paid);
+  return {occ,unpaid,total:occ.reduce((s,o)=>s+(o.bill.amount||0),0),unpaidTotal:unpaid.reduce((s,o)=>s+(o.bill.amount||0),0),info:pi};
+}
+// flexible (non-bill) spending logged within a date window, from budget envelopes
+function flexibleSpentBetween(from,to){
+  let sum=0;
+  Object.values(S.months).forEach(m=>{if(!m||!m.groups)return;m.groups.forEach(g=>g.items.forEach(i=>{
+    if(i.recurring)return; // recurring envelopes mirror bills; exclude to avoid double count
+    (i.txns||[]).forEach(x=>{const d=parseYMD(x.date);if(d&&d>=from&&d<=to)sum+=(parseFloat(x.amount)||0);});
+  }));});
+  return sum;
+}
+// rollover: unused (or overspent) money carried from prior months for a category, by name
+function rolloverCarry(monthKey,gName,iName,depth){
+  depth=depth||0; if(depth>240)return 0;
+  const prevKey=latestBefore(monthKey); if(!prevKey)return 0;
+  const pm=S.months[prevKey]; if(!pm||!pm.groups)return 0;
+  const pg=pm.groups.find(g=>g.name===gName); if(!pg)return 0;
+  const pi=pg.items.find(it=>it.name===iName); if(!pi||!pi.rollover)return 0;
+  return (pi.planned||0)+rolloverCarry(prevKey,gName,iName,depth+1)-(pi.actual||0);
+}
+// distinct recent transaction notes/merchants, newest first
+function recentNotes(n){
+  const all=[],seen=[],out=[];
+  Object.values(S.months).forEach(m=>m&&m.groups&&m.groups.forEach(g=>g.items.forEach(i=>(i.txns||[]).forEach(x=>{if(x.note&&x.note.trim())all.push({note:x.note.trim(),date:x.date||""});}))));
+  all.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  for(const x of all){const k=x.note.toLowerCase();if(seen.indexOf(k)<0){seen.push(k);out.push(x.note);}if(out.length>=(n||6))break;}
+  return out;
+}
+function safeUntilPayday(){
+  const s=S.settings;
+  const bb=billsBeforePayday(); if(!bb)return null;
+  const pi=bb.info;
+  const pay=parseFloat(s.payAmount)||0;
+  if(pay<=0)return {needPay:true,info:pi};
+  const periodDays=Math.max(1,dayDiff(pi.prev,pi.next));
+  const savingsForPeriod=(parseFloat(s.savingsGoal)||0)*(periodDays/30);
+  const spent=flexibleSpentBetween(pi.periodStart,pi.today);
+  const left=pay-savingsForPeriod-bb.total-spent;
+  const days=Math.max(1,pi.daysUntil);
+  return {pay,savingsForPeriod,billsTotal:bb.total,unpaidTotal:bb.unpaidTotal,spent,left,perDay:Math.max(0,left)/days,daysUntil:pi.daysUntil,info:pi,over:left<-0.5,bb};
+}
+
+// --- bill status ---
+function billStatus(b){
+  const today=todayLocal();
+  const y=today.getFullYear(),mo=today.getMonth();
+  const key=y+"-"+String(mo+1).padStart(2,"0");
+  const due=new Date(y,mo,clampDay(y,mo,b.dueDay));
+  const paid=!!(b.paid&&b.paid[key]);
+  if(paid)return {state:"paid",label:"Paid",color:"var(--teal)",bg:"var(--tealsoft)",due,key};
+  if(due<today)return {state:"overdue",label:"Overdue",color:"var(--red)",bg:"var(--redsoft)",due,key};
+  const dleft=dayDiff(today,due);
+  if(dleft<=7)return {state:"soon",label:dleft===0?"Due today":"Due in "+dleft+"d",color:"var(--orange)",bg:"var(--orangesoft)",due,key};
+  return {state:"upcoming",label:"Due "+dateLabel(due),color:"var(--dim)",bg:"var(--inset)",due,key};
+}
+function toggleBillPaid(id){
+  const b=(S.bills||[]).find(x=>x.id===id); if(!b)return;
+  const st=billStatus(b); b.paid=b.paid||{};
+  if(b.paid[st.key])delete b.paid[st.key]; else b.paid[st.key]=new Date().toISOString().slice(0,10);
+  commit();
+}
+
+function billsHTML(){
+  const bills=(S.bills||[]).slice().sort((a,b)=>(a.dueDay||0)-(b.dueDay||0));
+  let h='<div class="narrow">';
+  if(!bills.length){
+    h+='<div style="text-align:center;padding:46px 24px;color:var(--dim)">'
+      +'<div style="opacity:.35;margin-bottom:14px;display:flex;justify-content:center">'+I.receipt+'</div>'
+      +'<div style="font-size:14px;line-height:1.6;margin-bottom:22px">No bills yet.<br><span style="font-size:12.5px">Add your rent, car payment, subscriptions, or anything due monthly.</span></div>'
+      +'<button id="addBill" class="btn btn-teal" style="max-width:300px;margin:0 auto;display:block">'+I.plus+' Add your first bill</button></div></div>';
+    return h;
+  }
+  const totalMonthly=bills.reduce((s,b)=>s+(b.amount||0),0);
+  const unpaid=bills.filter(b=>billStatus(b).state!=="paid");
+  const unpaidTotal=unpaid.reduce((s,b)=>s+(b.amount||0),0);
+  const bb=S.settings.paycheckMode?billsBeforePayday():null;
+  h+='<div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;text-align:center">'
+    +'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800">'+fmt(totalMonthly)+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Monthly</div></div>'
+    +'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800;color:'+(unpaidTotal>0?"var(--orange)":"var(--teal)")+'">'+fmt(unpaidTotal)+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Unpaid</div></div>'
+    +(bb?'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800;color:'+(bb.unpaid.length?"var(--orange)":"var(--teal)")+'">'+bb.unpaid.length+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Before payday</div></div>':'')
+    +'</div>';
+  h+='<button id="addBill" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Add a bill</button>';
+  h+='<div class="sheet-grid"><div class="gcard">';
+  bills.forEach(b=>{
+    const st=billStatus(b);
+    h+='<div class="grow" data-billedit="'+b.id+'" style="align-items:center">'
+      +'<div class="gn" style="display:flex;flex-direction:column;gap:3px"><span>'+esc(b.name)+(b.recurring?' <span style="color:var(--dim);opacity:.55;vertical-align:middle">'+I.repeat+'</span>':'')+'</span>'
+      +'<span style="display:inline-flex;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:'+st.color+';background:'+st.bg+';padding:2px 7px;border-radius:99px">'+st.label+'</span></span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<button data-billpaid="'+b.id+'" style="background:'+(st.state==="paid"?"var(--inset)":"var(--tealsoft)")+';border:1px solid '+(st.state==="paid"?"var(--line)":"var(--tealb)")+';color:'+(st.state==="paid"?"var(--dim)":"var(--teal)")+';font-weight:800;font-size:11px;padding:6px 10px;border-radius:9px;display:flex;align-items:center;gap:4px">'+(st.state==="paid"?"Undo":I.check+" Pay")+'</button>'
+      +'<div class="gv">'+fmt(b.amount||0)+'</div></div></div>';
+  });
+  h+='</div></div></div>';
+  return h;
+}
+function openBillEdit(id){
+  const editing=(S.bills||[]).find(x=>x.id===id);
+  const b=editing||{name:"",amount:"",dueDay:"",recurring:true,notes:""};
+  sheet(editing?"Edit bill":"Add a bill",
+    fieldHTML("bl_name","Bill name",b.name,"text","e.g. Rent")
+    +'<div style="display:flex;gap:10px"><div style="flex:1.2">'+fieldHTML("bl_amt","Amount ($)",b.amount,"number","0")+'</div><div style="flex:1">'+fieldHTML("bl_day","Due day (1-31)",b.dueDay,"number","1")+'</div></div>'
+    +'<label class="toggle-row"><span>Repeats every month</span><input type="checkbox" id="bl_rec" '+(b.recurring!==false?"checked":"")+'></label>'
+    +fieldHTML("bl_note","Note (optional)",b.notes,"text","")
+    +'<button id="blSave" class="btn btn-teal" style="margin-top:6px;margin-bottom:10px">'+(editing?"Save changes":"Add bill")+'</button>'
+    +(editing?'<button id="blDel" class="btn" style="background:var(--redsoft);border:1px solid rgba(248,113,113,.3);color:var(--red);font-size:13.5px">Delete bill</button>':''));
+  document.getElementById("blSave").onclick=()=>{
+    const name=document.getElementById("bl_name").value.trim();
+    const amt=parseFloat(document.getElementById("bl_amt").value)||0;
+    const day=Math.min(31,Math.max(1,parseInt(document.getElementById("bl_day").value)||1));
+    if(!name){toast("Give the bill a name","var(--orange)");return;}
+    const rec=document.getElementById("bl_rec").checked;
+    const note=document.getElementById("bl_note").value||"";
+    if(editing){editing.name=name;editing.amount=amt;editing.dueDay=day;editing.recurring=rec;editing.notes=note;}
+    else{S.bills=S.bills||[];S.bills.push({id:nid(),name,amount:amt,dueDay:day,category:"",recurring:rec,notes:note,paid:{}});}
+    closeModal();commit();toast(editing?"Bill updated":"Bill added","var(--teal)");
+  };
+  const del=document.getElementById("blDel");
+  if(del)del.onclick=()=>{S.bills=(S.bills||[]).filter(x=>x.id!==editing.id);closeModal();commit();toast("Bill deleted","var(--orange)");};
+}
+
+// --- dashboard ---
+function feedbackLines(m,t){
+  const out=[];
+  const paycheck=S.settings.paycheckMode&&paydayInfo();
+  if(paycheck){
+    const sp=safeUntilPayday();
+    if(sp&&!sp.needPay){
+      if(sp.over)out.push({t:"You're "+fmt(-sp.left)+" short before payday — ease off flexible spending.",c:"var(--red)"});
+      else out.push({t:"You have "+fmt(sp.left)+" for flexible spending until payday.",c:"var(--teal)"});
+    }
+    if(sp&&sp.bb&&sp.bb.unpaid.length)out.push({t:"You have "+sp.bb.unpaid.length+" unpaid bill"+(sp.bb.unpaid.length>1?"s":"")+" before payday.",c:"var(--orange)"});
+  }else if(m){
+    const sts=safeToSpend(m);
+    if(sts&&!sts.over)out.push({t:"You have "+fmt(sts.pool)+" left for flexible spending this month.",c:"var(--teal)"});
+    else if(sts&&sts.over)out.push({t:"You're over your flexible budget by "+fmt(-sts.pool)+".",c:"var(--red)"});
+  }
+  // category warnings
+  if(m)m.groups.forEach(g=>g.items.forEach(i=>{
+    if(i.recurring||!(i.planned>0))return;
+    const r=(i.planned)-(i.actual||0);
+    if(r<-0.5)out.push({t:"You're over budget in "+esc(i.name)+".",c:"var(--red)"});
+    else if(i.actual>=i.planned*0.9)out.push({t:esc(i.name)+" is almost maxed out.",c:"var(--orange)"});
+  }));
+  if(!out.length)out.push({t:"You're on track. Nice work.",c:"var(--teal)"});
+  return out.slice(0,3);
+}
+function dashCard(label,value,sub,color){
+  return '<div class="gcard" style="padding:14px 15px">'
+    +'<div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.09em;font-weight:600;margin-bottom:7px">'+label+'</div>'
+    +'<div class="mono" style="font-size:23px;font-weight:800;letter-spacing:-.02em;color:'+(color||"var(--text)")+'">'+value+'</div>'
+    +(sub?'<div style="font-size:11.5px;color:var(--dim);margin-top:4px;line-height:1.4">'+sub+'</div>':'')
+    +'</div>';
+}
+function dashboardHTML(m,t){
+  let h='<div class="narrow">';
+  const paycheckOn=S.settings.paycheckMode&&paydayInfo();
+  // hero feedback
+  const fb=feedbackLines(m,t);
+  h+='<div class="card" style="margin-bottom:14px">'
+    +fb.map((f,i)=>'<div style="display:flex;gap:9px;align-items:flex-start;'+(i?"margin-top:9px":"")+'"><span style="width:7px;height:7px;border-radius:99px;background:'+f.c+';margin-top:5px;flex-shrink:0"></span><span style="font-size:14px;line-height:1.45;color:var(--text)">'+f.t+'</span></div>').join("")
+    +'</div>';
+  h+='<div class="sheet-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  if(paycheckOn){
+    const sp=safeUntilPayday(), pi=paydayInfo();
+    h+=dashCard("Next payday",dateLabel(pi.next),pi.daysUntil===0?"today":"in "+pi.daysUntil+" day"+(pi.daysUntil>1?"s":""),"var(--teal)");
+    if(sp&&!sp.needPay){
+      h+=dashCard("Safe to spend / day",fmt(sp.perDay),"until payday",sp.over?"var(--red)":"var(--teal)");
+      h+=dashCard("Left after bills",fmt(sp.left),"this paycheck",sp.left<0?"var(--red)":"var(--text)");
+    }else{
+      h+=dashCard("Safe to spend","—","add pay amount in settings","var(--dim)");
+    }
+    const bb=billsBeforePayday();
+    h+=dashCard("Bills before payday",fmt(bb?bb.unpaidTotal:0),(bb?bb.unpaid.length:0)+" unpaid","var(--orange)");
+  }else if(m){
+    const sts=safeToSpend(m);
+    h+=dashCard("Remaining this month",fmt(t.income-t.savings-t.actual),"income minus saved & spent",(t.income-t.savings-t.actual)<0?"var(--red)":"var(--teal)");
+    h+=dashCard("Safe to spend / day",sts?fmt(sts.over?0:sts.perDay):"—",sts?(sts.daysLeft+" days left"):"set a flexible budget","var(--teal)");
+    h+=dashCard("Spent so far",fmt(t.actual),"of "+fmt(t.planned)+" planned",t.actual>t.planned?"var(--red)":"var(--text)");
+    h+=dashCard("Income",fmt(t.income),monthName(mk),"var(--text)");
+  }else{
+    h+='</div><div style="text-align:center;padding:36px 20px;color:var(--dim);font-size:13px;line-height:1.6">No budget for '+monthName(mk)+' yet. Head to <b style="color:var(--teal)">Budget</b> to set one up.</div></div>';
+    return h;
+  }
+  // bills snapshot
+  const billsTot=(S.bills||[]).reduce((s,b)=>s+(b.amount||0),0);
+  h+=dashCard("Planned bills",fmt(billsTot),(S.bills||[]).length+" bill"+((S.bills||[]).length!==1?"s":""),"var(--text)");
+  // savings progress
+  const goal=parseFloat(S.settings.savingsGoal)||t.savings||0;
+  h+=dashCard("Savings goal",fmt(goal),goal>0?"per month":"none set",goal>0?"var(--purple)":"var(--dim)");
+  h+='</div>';
+  // quick actions
+  h+='<div style="display:flex;gap:10px;margin-top:14px">'
+    +'<button id="dashLog" class="btn btn-teal" style="flex:1">'+I.plus+' Log spending</button>'
+    +'<button id="dashBills" class="btn btn-ghost" style="flex:1;color:var(--text)">View bills</button></div>';
+  h+='</div>';
+  return h;
+}
+
+// --- debts ---
+function debtsHTML(){
+  const debts=S.debts||[];
+  let h='<div class="narrow">'+moreBackBtn("Debt tracker");
+  if(!debts.length){
+    h+='<div style="text-align:center;padding:40px 24px;color:var(--dim)">'
+      +'<div style="opacity:.35;margin-bottom:14px;display:flex;justify-content:center">'+I.card+'</div>'
+      +'<div style="font-size:14px;line-height:1.6;margin-bottom:22px">No debts tracked yet.<br><span style="font-size:12.5px">Add credit cards or loans to see balances and minimum payments.</span></div>'
+      +'<button id="addDebt" class="btn btn-teal" style="max-width:300px;margin:0 auto;display:block">'+I.plus+' Add a debt</button></div></div>';
+    return h;
+  }
+  const total=debts.reduce((s,d)=>s+(parseFloat(d.balance)||0),0);
+  const mins=debts.reduce((s,d)=>s+(parseFloat(d.minPayment)||0),0);
+  h+='<div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;text-align:center">'
+    +'<div style="flex:1"><div class="mono" style="font-size:21px;font-weight:800;color:var(--red)">'+fmt(total)+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Total owed</div></div>'
+    +'<div style="flex:1"><div class="mono" style="font-size:21px;font-weight:800">'+fmt(mins)+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Monthly minimums</div></div></div>';
+  h+='<button id="addDebt" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Add a debt</button>';
+  h+='<div class="sheet-grid"><div class="gcard">';
+  debts.slice().sort((a,b)=>(parseFloat(a.balance)||0)-(parseFloat(b.balance)||0)).forEach(d=>{
+    const sub=[d.apr?(parseFloat(d.apr)).toFixed(2)+"% APR":"",d.minPayment?fmt(d.minPayment)+"/mo min":""].filter(Boolean).join(" · ");
+    h+='<div class="grow" data-debtedit="'+d.id+'">'
+      +'<div class="gn"><span>'+esc(d.name)+'</span>'+(sub?'<div class="gspent" style="color:var(--dim)">'+sub+'</div>':'')+'</div>'
+      +'<div class="gv" style="color:var(--red)">'+fmt(d.balance||0)+'</div></div>';
+  });
+  h+='</div></div>';
+  h+='<div style="font-size:11.5px;color:var(--dim);text-align:center;margin-top:14px;line-height:1.5">Smallest balance first (snowball). Pay minimums on all, then put extra toward the top of the list.</div>';
+  h+='</div>';
+  return h;
+}
+function openDebtEdit(id){
+  const editing=(S.debts||[]).find(x=>x.id===id);
+  const d=editing||{name:"",balance:"",minPayment:"",apr:"",dueDay:"",notes:""};
+  sheet(editing?"Edit debt":"Add a debt",
+    fieldHTML("db_name","Name",d.name,"text","e.g. Visa card")
+    +'<div style="display:flex;gap:10px"><div style="flex:1">'+fieldHTML("db_bal","Balance ($)",d.balance,"number","0")+'</div><div style="flex:1">'+fieldHTML("db_min","Min payment ($)",d.minPayment,"number","0")+'</div></div>'
+    +'<div style="display:flex;gap:10px"><div style="flex:1">'+fieldHTML("db_apr","APR % (optional)",d.apr,"number","")+'</div><div style="flex:1">'+fieldHTML("db_day","Due day (optional)",d.dueDay,"number","")+'</div></div>'
+    +fieldHTML("db_note","Note (optional)",d.notes,"text","")
+    +'<button id="dbSave" class="btn btn-teal" style="margin-top:6px;margin-bottom:10px">'+(editing?"Save changes":"Add debt")+'</button>'
+    +(editing?'<button id="dbDel" class="btn" style="background:var(--redsoft);border:1px solid rgba(248,113,113,.3);color:var(--red);font-size:13.5px">Delete debt</button>':''));
+  document.getElementById("dbSave").onclick=()=>{
+    const name=document.getElementById("db_name").value.trim();
+    if(!name){toast("Give the debt a name","var(--orange)");return;}
+    const o={name,balance:parseFloat(document.getElementById("db_bal").value)||0,minPayment:parseFloat(document.getElementById("db_min").value)||0,apr:parseFloat(document.getElementById("db_apr").value)||0,dueDay:parseInt(document.getElementById("db_day").value)||0,notes:document.getElementById("db_note").value||""};
+    if(editing)Object.assign(editing,o); else{S.debts=S.debts||[];S.debts.push({id:nid(),paid:{},...o});}
+    closeModal();commit();toast(editing?"Debt updated":"Debt added","var(--teal)");
+  };
+  const del=document.getElementById("dbDel");
+  if(del)del.onclick=()=>{S.debts=(S.debts||[]).filter(x=>x.id!==editing.id);closeModal();commit();toast("Debt deleted","var(--orange)");};
+}
+
+// --- weekly review ---
+function weeklyReviewHTML(){
+  const today=todayLocal();
+  const weekAgo=new Date(today);weekAgo.setDate(weekAgo.getDate()-6);
+  let spent=0, byCat={};
+  Object.values(S.months).forEach(m=>{if(!m||!m.groups)return;m.groups.forEach(g=>g.items.forEach(i=>{
+    (i.txns||[]).forEach(x=>{const dd=parseYMD(x.date);if(dd&&dd>=weekAgo&&dd<=today){const a=parseFloat(x.amount)||0;spent+=a;byCat[g.name]=(byCat[g.name]||0)+a;}});
+  }));});
+  const top=Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  const nextWeek=new Date(today);nextWeek.setDate(nextWeek.getDate()+7);
+  const dueNext=billOccurrencesBetween(today,nextWeek);
+  const m=M();
+  let nearLimit=[];
+  if(m)m.groups.forEach(g=>g.items.forEach(i=>{if(!i.recurring&&i.planned>0&&i.actual>=i.planned*0.85)nearLimit.push(i.name);}));
+  let h='<div class="narrow">'+moreBackBtn("This week");
+  h+='<div class="card" style="margin-bottom:14px;text-align:center;padding:20px 18px">'
+    +'<div style="color:var(--dim);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;margin-bottom:6px">Spent in the last 7 days</div>'
+    +'<div class="mono" style="font-size:34px;font-weight:800;letter-spacing:-.02em">'+fmt(spent)+'</div>'
+    +(top?'<div style="font-size:12.5px;color:var(--dim);margin-top:8px">Most went to <b style="color:var(--text)">'+esc(top[0])+'</b> ('+fmt(top[1])+')</div>':'<div style="font-size:12.5px;color:var(--dim);margin-top:8px">No spending logged this week yet.</div>')
+    +'</div>';
+  h+='<div class="gcard" style="margin-bottom:14px">'
+    +'<div class="grow" style="cursor:default"><div class="gn">Bills due next week</div><div class="gv">'+dueNext.length+'</div></div>'
+    +(dueNext.length?dueNext.map(o=>'<div class="grow" style="cursor:default"><div class="gn" style="font-weight:500;color:var(--dim);font-size:13px">'+esc(o.bill.name)+' · '+dateLabel(o.date)+'</div><div class="gv" style="font-size:13px">'+fmt(o.bill.amount||0)+'</div></div>').join(""):'')
+    +'</div>';
+  // suggested action
+  let action="You're on track — no action needed.";
+  if(dueNext.some(o=>!o.paid))action="Mark upcoming bills paid as you pay them.";
+  else if(nearLimit.length)action="Review "+esc(nearLimit[0])+" — it's close to its limit.";
+  else if(spent===0)action="Log any spending from this week so your numbers stay accurate.";
+  h+='<div class="card" style="background:var(--tealsoft);border-color:var(--tealb)"><div style="font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:.09em;font-weight:700;margin-bottom:6px">Suggested next step</div><div style="font-size:14px;line-height:1.5">'+action+'</div></div>';
+  h+='</div>';
+  return h;
+}
+
+// --- more menu + privacy ---
+function moreBackBtn(title){
+  return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><button id="moreBack" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:34px;height:34px;display:flex;align-items:center;justify-content:center">'+I.back+'</button><div style="font-weight:800;font-size:18px;letter-spacing:-.01em">'+title+'</div></div>';
+}
+function moreRow(id,icon,label,sub){
+  return '<button id="'+id+'" class="btn btn-ghost" style="display:flex;align-items:center;gap:13px;padding:15px 16px;border-radius:14px;text-align:left;margin-bottom:9px;width:100%;color:var(--text)">'
+    +'<span style="color:var(--teal);display:flex;flex-shrink:0">'+icon+'</span>'
+    +'<span style="flex:1"><span style="display:block;font-size:14.5px;font-weight:700">'+label+'</span>'+(sub?'<span style="display:block;font-size:12px;color:var(--dim);font-weight:500;margin-top:1px">'+sub+'</span>':'')+'</span>'
+    +'<span style="color:var(--dim);opacity:.5;display:flex">'+I.right+'</span></button>';
+}
+function moreHTML(){
+  return '<div class="narrow"><div style="font-weight:800;font-size:22px;letter-spacing:-.02em;margin-bottom:18px">More</div>'
+    +moreRow("mYear",I.chart,"Year view","Spending and savings across the year")
+    +moreRow("mDebt",I.card,"Debt tracker","Balances and minimum payments")
+    +moreRow("mWeekly",I.check,"Weekly review","A quick look at the last 7 days")
+    +'<div style="height:1px;background:var(--line);margin:10px 0 16px"></div>'
+    +moreRow("mSettings",I.gear,"Settings","Income, paycheck, theme, backup")
+    +moreRow("mPrivacy",I.shield,"Privacy","How your data is stored")
+    +'</div>';
+}
+function openPrivacy(){
+  sheet("Your privacy",
+    '<div style="font-size:13.5px;line-height:1.7;color:var(--text)">Allotted is built to be private by default:</div>'
+    +'<ul style="font-size:13.5px;line-height:1.8;color:var(--dim);padding-left:18px;margin:12px 0">'
+    +'<li>No account or login required</li><li>No bank connection</li><li>No ads</li><li>No tracking or analytics</li><li>No data leaves your device</li><li>You control your own backups</li></ul>'
+    +'<div style="font-size:13px;line-height:1.65;color:var(--dim)">Everything you enter is stored locally on this device. The app works fully offline. If you delete the app or clear its data without a backup, it\u2019s gone \u2014 so back up regularly from Settings.</div>');
+}
+
+// --- paycheck settings sub-sheet ---
+function openPaycheckSettings(){
+  const s=S.settings;
+  const opts=[["weekly","Weekly"],["biweekly","Every 2 weeks"],["semimonthly","Twice a month"],["monthly","Monthly"],["custom","Custom"]];
+  const chips=opts.map(o=>'<button data-psfreq="'+o[0]+'" class="ob-chip'+(s.payFrequency===o[0]?" on":"")+'">'+o[1]+'</button>').join("");
+  sheet("Income &amp; paycheck",
+    '<label class="toggle-row" style="margin-bottom:16px"><span><b>Paycheck mode</b><span style="display:block;font-size:12px;color:var(--dim);font-weight:400;margin-top:2px">Plan around paydays instead of the calendar month</span></span><input type="checkbox" id="ps_mode" '+(s.paycheckMode?"checked":"")+'></label>'
+    +fieldHTML("ps_income","Monthly take-home income",s.monthlyIncome,"number","")
+    +fieldHTML("ps_savings","Monthly savings goal",s.savingsGoal,"number","")
+    +'<div class="label" style="margin:6px 0 8px">Pay schedule</div><div class="ob-chips" style="margin-bottom:14px">'+chips+'</div>'
+    +'<div id="ps_customWrap" style="display:'+(s.payFrequency==="custom"?"block":"none")+'">'+fieldHTML("ps_customDays","Days between paychecks",s.customDays||14,"number","14")+'</div>'
+    +'<div style="display:flex;gap:10px"><div style="flex:1.2">'+fieldHTML("ps_payday","Next payday",s.nextPayday,"date")+'</div><div style="flex:1">'+fieldHTML("ps_amount","Pay amount",s.payAmount,"number","")+'</div></div>'
+    +'<button id="psSave" class="btn btn-teal" style="margin-top:8px">Save</button>');
+  let freq=s.payFrequency;
+  document.querySelectorAll("[data-psfreq]").forEach(b=>b.onclick=()=>{
+    freq=b.dataset.psfreq;
+    document.querySelectorAll("[data-psfreq]").forEach(x=>x.classList.toggle("on",x.dataset.psfreq===freq));
+    document.getElementById("ps_customWrap").style.display=freq==="custom"?"block":"none";
+  });
+  document.getElementById("psSave").onclick=()=>{
+    s.paycheckMode=document.getElementById("ps_mode").checked;
+    s.monthlyIncome=parseFloat(document.getElementById("ps_income").value)||0;
+    s.savingsGoal=parseFloat(document.getElementById("ps_savings").value)||0;
+    s.payFrequency=freq;
+    const cd=document.getElementById("ps_customDays");if(cd)s.customDays=parseInt(cd.value)||14;
+    s.nextPayday=document.getElementById("ps_payday").value||"";
+    s.payAmount=parseFloat(document.getElementById("ps_amount").value)||0;
+    closeModal();commit();toast("Saved","var(--teal)");
+  };
+}
+
 function backupStatus(){
   if(!S.lastBackup)return {text:"Never backed up — grab one now",color:"var(--orange)"};
   const days=Math.floor((Date.now()-S.lastBackup)/86400000);
@@ -919,6 +1517,12 @@ function openSettings(){
     +'<button data-themeset="dark" style="'+(S.theme!=="light"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Dark</button>'
     +'<button data-themeset="light" style="'+(S.theme==="light"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Light</button>'
     +'</div>'
+    +'<div class="label" style="margin-bottom:8px">Setup</div>'
+    +'<button id="setPaycheck" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:10px;text-align:left"><span style="color:var(--teal);display:flex">'+I.wallet+'</span> Income &amp; paycheck</button>'
+    +'<button id="setBills" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:10px;text-align:left"><span style="color:var(--teal);display:flex">'+I.receipt+'</span> Manage bills</button>'
+    +'<button id="setDebts" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:10px;text-align:left"><span style="color:var(--teal);display:flex">'+I.card+'</span> Manage debts</button>'
+    +'<button id="obRestart" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:10px;text-align:left"><span style="color:var(--teal);display:flex">'+I.gear+'</span> Re-run first-time setup</button>'
+    +'<button id="setPrivacy" class="btn btn-ghost" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;font-size:14px;color:var(--text);margin-bottom:18px;text-align:left"><span style="color:var(--teal);display:flex">'+I.shield+'</span> Privacy</button>'
     +'<div class="label" style="margin-bottom:8px">Backup &amp; data</div>'
     +'<div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:'+bs.color+';margin-bottom:10px"><span style="width:8px;height:8px;border-radius:99px;background:'+bs.color+';flex-shrink:0"></span>'+bs.text+'</div>'
     +'<div style="font-size:12px;color:var(--dim);margin-bottom:12px;line-height:1.5">Your data lives only on this device. Back it up regularly — if you clear your browser or delete the app without a backup, it\u2019s gone for good. Copy backup is the most reliable.</div>'
@@ -944,6 +1548,12 @@ function openSettings(){
       x.style.color=on?"var(--teal)":"var(--dim)";
     });
   });
+
+  const obR=document.getElementById("obRestart");if(obR)obR.onclick=()=>{closeModal();startOnboarding();};
+  const sPay=document.getElementById("setPaycheck");if(sPay)sPay.onclick=()=>{closeModal();openPaycheckSettings();};
+  const sBl=document.getElementById("setBills");if(sBl)sBl.onclick=()=>{closeModal();tab="bills";render();};
+  const sDb=document.getElementById("setDebts");if(sDb)sDb.onclick=()=>{closeModal();tab="debt";render();};
+  const sPr=document.getElementById("setPrivacy");if(sPr)sPr.onclick=()=>{closeModal();openPrivacy();};
 
   document.getElementById("bkCopy").onclick=async()=>{
     const txt=backupText();
@@ -1004,7 +1614,7 @@ function openSettings(){
       soAll.style.borderColor="var(--red)";
       return;
     }
-    S.months={};S.lastBackup=null;tab="budget";
+    S.months={};S.bills=[];S.debts=[];S.settings=defaultSettings();S.lastBackup=null;tab="budget";
     const now=new Date();mk=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
     closeModal();commit();toast("Starting fresh — pick an option to begin");
   };
@@ -1014,8 +1624,8 @@ function applyBackup(text){
   try{
     const d=JSON.parse(text.trim());
     if(!d.months)throw 0;
-    S.months=d.months;
-    if(d.lastBackup!==undefined)S.lastBackup=d.lastBackup;
+    adoptState(d);
+    migrate();
     closeModal();commit();toast("Backup restored");
     return true;
   }catch(e){toast("That text isn't a valid backup","var(--red)");return false;}
@@ -1086,8 +1696,8 @@ function bind(){
   const pa=document.getElementById("payAllRec");if(pa)pa.onclick=payAllRecurring;
   const lt=document.getElementById("logTxn");if(lt)lt.onclick=openTxnPicker;
   const ag=document.getElementById("addGroup");if(ag)ag.onclick=openAddGroup;
-  const ws=document.getElementById("wStart");if(ws)ws.onclick=()=>{S.months[mk]=templateMonth();tab="budget";commit();toast("Starter budget created — set your amounts");};
-  const wbl=document.getElementById("wBlank");if(wbl)wbl.onclick=()=>{S.months[mk]=blankMonth();tab="budget";commit();};
+  const wob=document.getElementById("wOnboard");if(wob)wob.onclick=startOnboarding;
+  const wbl=document.getElementById("wBlank");if(wbl)wbl.onclick=()=>{S.months[mk]=blankMonth();S.settings.onboardingCompleted=true;tab="dashboard";commit();};
   const wi=document.getElementById("wImport");if(wi)wi.onclick=openPasteRestore;
   const so=document.getElementById("startOver");if(so)so.onclick=()=>{delete S.months[mk];commit();};
   const cp=document.getElementById("copyPrev");
@@ -1099,13 +1709,30 @@ function bind(){
   };
   const st=document.getElementById("startTemplate");
   if(st)st.onclick=()=>{S.months[mk]=templateMonth();commit();};
+  // --- v2: bills ---
+  const ab=document.getElementById("addBill");if(ab)ab.onclick=()=>openBillEdit();
+  document.querySelectorAll("[data-billedit]").forEach(el=>el.onclick=()=>openBillEdit(el.dataset.billedit));
+  document.querySelectorAll("[data-billpaid]").forEach(el=>el.onclick=e=>{e.stopPropagation();toggleBillPaid(el.dataset.billpaid);});
+  // --- v2: debts ---
+  const adb=document.getElementById("addDebt");if(adb)adb.onclick=()=>openDebtEdit();
+  document.querySelectorAll("[data-debtedit]").forEach(el=>el.onclick=()=>openDebtEdit(el.dataset.debtedit));
+  // --- v2: dashboard quick actions ---
+  const dl=document.getElementById("dashLog");if(dl)dl.onclick=openTxnPicker;
+  const dbv=document.getElementById("dashBills");if(dbv)dbv.onclick=()=>{tab="bills";render();};
+  // --- v2: more menu ---
+  const mb=document.getElementById("moreBack");if(mb)mb.onclick=()=>{tab="more";render();};
+  const my=document.getElementById("mYear");if(my)my.onclick=()=>{tab="year";render();};
+  const md=document.getElementById("mDebt");if(md)md.onclick=()=>{tab="debt";render();};
+  const mw=document.getElementById("mWeekly");if(mw)mw.onclick=()=>{tab="weekly";render();};
+  const ms=document.getElementById("mSettings");if(ms)ms.onclick=openSettings;
+  const mp=document.getElementById("mPrivacy");if(mp)mp.onclick=openPrivacy;
 }
 
 document.getElementById("fileInput").addEventListener("change",e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
   const r=new FileReader();
   r.onload=()=>{
-    try{const d=JSON.parse(r.result);if(!d.months)throw 0;S.months=d.months;if(d.lastBackup!==undefined)S.lastBackup=d.lastBackup;closeModal();commit();toast("Backup restored");}
+    try{const d=JSON.parse(r.result);if(!d.months)throw 0;adoptState(d);migrate();closeModal();commit();toast("Backup restored");}
     catch(err){toast("That file doesn't look like a valid backup","var(--red)");}
   };
   r.readAsText(f);e.target.value="";
