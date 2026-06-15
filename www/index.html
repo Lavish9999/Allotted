@@ -162,7 +162,7 @@ function blankMonth(){
 
 const CURRENT_SCHEMA=3;
 function defaultSettings(){
-  return {onboardingCompleted:false,paycheckMode:false,budgetMode:"monthly",billsView:"upcoming",payFrequency:"biweekly",nextPayday:"",payAmount:0,monthlyIncome:0,savingsGoal:0,customDays:14,weeklyLimit:0};
+  return {onboardingCompleted:false,paycheckMode:false,budgetMode:"monthly",billsView:"upcoming",payFrequency:"biweekly",nextPayday:"",payAmount:0,monthlyIncome:0,savingsGoal:0,customDays:14,weeklyLimit:0,txnSearch:""};
 }
 let S={schemaVersion:CURRENT_SCHEMA,months:{},bills:[],debts:[],paychecks:[],moveHistory:[],settings:defaultSettings(),lastBackup:null,theme:"dark",lastLog:null};
 let mk=new Date().toISOString().slice(0,7); // selected month "YYYY-MM"
@@ -197,8 +197,8 @@ function applyTheme(){
   if(mc)mc.setAttribute("content",S.theme==="light"?"#F2F5F6":"#0B0E10");
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
-// ---- spend buckets: recurring => Fixed Bills, flexible => Monthly Expenses, fallback => Other ----
-const G_FIXED="Fixed Bills", G_FLEX="Monthly Expenses", G_OTHER="Other";
+// ---- spend buckets: recurring => Fixed Bills, flexible => Flexible Spending, fallback => Other ----
+const G_FIXED="Fixed Bills", G_FLEX="Flexible Spending", G_OTHER="Other";
 const FIXED_HINTS=["rent","mortgage","car payment","car insurance","insurance","phone","internet","utilit","electric","water","subscription","loan","streaming","cable","gym","membership"];
 function looksFixed(name){const n=(name||"").toLowerCase();return FIXED_HINTS.some(h=>n.includes(h));}
 function itemBucket(i){
@@ -314,7 +314,7 @@ function migrate(){
       }
       recalcItem(i);
     }));
-    normalizeBuckets(m); // organize into Fixed Bills / Monthly Expenses / Other
+    normalizeBuckets(m); // organize into Fixed Bills / Flexible Spending / Other
   });
   Object.keys(S.months).forEach(k=>syncBillsFromBudget(S.months[k]));
   // schema v2: first-class bills/debts + settings (paycheck, onboarding)
@@ -502,9 +502,10 @@ function welcomeHTML(){
   return '<div class="card" style="text-align:center;max-width:440px;margin:10px auto;padding:32px 24px">'
     +'<div style="display:flex;justify-content:center;margin-bottom:14px">'+logoSVG(72,true)+'</div>'
     +'<div style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px">Allotted</div>'
-    +'<div style="color:var(--teal);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:20px">Give every dollar a job</div>'
-    +'<div style="color:var(--dim);font-size:13.5px;line-height:1.65;margin-bottom:22px">At the start of each month, give every dollar of income a job. Then track what you spend and watch each category drain down. Everything stays on this device.</div>'
+    +'<div style="color:var(--teal);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:20px">Private budgeting · no bank login</div>'
+    +'<div style="color:var(--dim);font-size:13.5px;line-height:1.65;margin-bottom:22px">Plan your month, lock bill money, and see what is safe to spend today. Manual by design, private by default, and everything stays on this device.</div>'
     +'<button id="wOnboard" class="btn btn-teal" style="margin-bottom:10px">Build my first budget</button>'
+    +'<button id="wDemo" class="btn btn-ghost" style="margin-bottom:10px;color:var(--teal);border-color:var(--tealb)">Try demo budget</button>'
     +'<button id="wTemplate" class="btn btn-ghost" style="margin-bottom:10px;color:var(--text)">Start with a template</button>'
     +'<button id="wBlank" class="btn btn-ghost" style="margin-bottom:10px;color:var(--text)">Enter app without setup</button>'
     +'<button id="wImport" class="btn btn-ghost" style="color:var(--text)">Restore from backup</button>'
@@ -631,7 +632,7 @@ function obFinish(){
     savings:[{id:nid(),name:"Savings",amount:goal}],
     groups:[]
   };
-  // selected spending categories are flexible -> Monthly Expenses; Fixed Bills starts empty
+  // selected spending categories are flexible -> Flexible Spending; Fixed Bills starts empty
   const catItems=OB.cats.filter(c=>c&&c.trim()).map(c=>({id:nid(),name:c.trim(),planned:0,actual:0,txns:[],recurring:false}));
   month.groups.push({id:nid(),name:G_FIXED,items:[]});
   month.groups.push({id:nid(),name:G_FLEX,items:catItems});
@@ -895,6 +896,7 @@ function trackHTML(m,t){
     h+='</div>';
   });
   h+='</div>';
+  h+=recentTransactionsHTML(m);
   return h;
 }
 
@@ -1026,7 +1028,7 @@ function openTxnPicker(){
   if(!cats.length){toast("Add spending categories on the Budget tab first","var(--orange)");return;}
   const today=new Date().toISOString().slice(0,10);
   const sel="width:100%;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;color:var(--text);padding:12px 14px;font-size:15px;outline:none;-webkit-appearance:none;appearance:none";
-  let defGid=cats[0].id,defIid=null;
+  let defGid=cats.find(g=>g.name===G_FLEX)?.id||cats[0].id,defIid=null;
   if(S.lastLog){
     const lg=cats.find(g=>g.id===S.lastLog.gid);
     if(lg){defGid=lg.id;const li=lg.items.find(x=>x.id===S.lastLog.iid);if(li)defIid=li.id;}
@@ -1046,6 +1048,14 @@ function openTxnPicker(){
   document.querySelectorAll("[data-pnote]").forEach(b=>b.onclick=()=>{document.getElementById("p_note").value=b.dataset.pnote;});
   const catEl=document.getElementById("p_cat");
   catEl.onchange=()=>{document.getElementById("p_line").innerHTML=lineOpts(catEl.value,null);};
+  const finishLog=(g,i,amt,note,date,type)=>{
+    i.txns=i.txns||[];
+    i.txns.push({id:nid(),date:date||today,amount:amt,note:note,type:type});
+    recalcItem(i);const nrem=(i.planned||0)-i.actual;
+    S.lastLog={gid:g.id,iid:i.id};
+    closeModal();commit();
+    toast("Logged "+fmtC(amt)+" · "+fmt(nrem)+" left in "+i.name,nrem<0?"var(--orange)":"var(--teal)");
+  };
   document.getElementById("pSave").onclick=()=>{
     const g=m.groups.find(x=>x.id===catEl.value);
     const i=g&&g.items.find(x=>x.id===document.getElementById("p_line").value);
@@ -1054,17 +1064,18 @@ function openTxnPicker(){
     if(isNaN(amt)||amt===0){toast("Enter an amount","var(--orange)");return;}
     const note=document.getElementById("p_note").value||"";
     const type=(document.getElementById("p_type")&&document.getElementById("p_type").value)||"flex";
+    const date=document.getElementById("p_date").value||today;
     const match=findMatchingUnpaidBill(amt,note||i.name);
-    if(match && type!=="flex" && confirm("Is this the bill payment for "+match.name+"?")){
-      markBillPaidState(match.id,document.getElementById("p_date").value||today);
-      closeModal();commit();toast("Marked "+match.name+" paid","var(--teal)");return;
+    if(match){
+      sheet("Is this a bill payment?",
+        '<div style="font-size:13.5px;color:var(--dim);line-height:1.55;margin-bottom:16px">This looks like <b style="color:var(--text)">'+esc(match.name)+'</b> for <span class="mono" style="color:var(--text)">'+fmtC(match.amount||0)+'</span>. Marking it as a bill keeps it out of flexible spending.</div>'
+        +'<button id="billMatchYes" class="btn btn-teal" style="margin-bottom:10px">Yes, mark bill paid</button>'
+        +'<button id="billMatchNo" class="btn btn-ghost" style="color:var(--text)">No, log separately</button>');
+      document.getElementById("billMatchYes").onclick=()=>{markBillPaidState(match.id,date);closeModal();commit();toast("Marked "+match.name+" paid","var(--teal)");};
+      document.getElementById("billMatchNo").onclick=()=>finishLog(g,i,amt,note,date,type);
+      return;
     }
-    i.txns=i.txns||[];
-    i.txns.push({id:nid(),date:document.getElementById("p_date").value||today,amount:amt,note:note,type:type});
-    recalcItem(i);const nrem=(i.planned||0)-i.actual;
-    S.lastLog={gid:g.id,iid:i.id};
-    closeModal();commit();
-    toast("Logged "+fmtC(amt)+" · "+fmt(nrem)+" left in "+i.name,nrem<0?"var(--orange)":"var(--teal)");
+    finishLog(g,i,amt,note,date,type);
   };
 }
 
@@ -1179,7 +1190,7 @@ function openEditEntry(kind,gid,iid){
 }
 
 function catSegHTML(current){
-  const opts=[[G_FIXED,"Fixed Bills","Repeats monthly",I.repeat],[G_FLEX,"Monthly Expenses","Flexible, changes each month",""],[G_OTHER,"Other","Everything else",""]];
+  const opts=[[G_FIXED,"Fixed Bills","Repeats monthly",I.repeat],[G_FLEX,"Flexible Spending","Daily spending, changes each month",""],[G_OTHER,"Other","Everything else",""]];
   return '<div class="label" style="margin-bottom:8px">Category</div><div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">'
     +opts.map(o=>'<button type="button" data-catpick="'+o[0]+'" class="catopt'+(current===o[0]?" on":"")+'">'
       +'<span style="display:flex;align-items:center;gap:7px;font-weight:700">'+(o[3]||'')+o[1]+'</span>'
@@ -1425,7 +1436,8 @@ function warningCards(area,m,t){
   }));
   if(S.settings.paycheckMode){const bb=billsBeforePayday();if(bb&&bb.unpaid.length)push("caution","This paycheck has "+bb.unpaid.length+" unpaid bill"+(bb.unpaid.length>1?"s":"")+" before the next payday.");}
   const chosen=[];
-  for(const sev of ["danger","caution","info"]){for(const w of out.filter(x=>x.severity===sev)){if(!chosen.some(c=>c.text===w.text))chosen.push(w);if(chosen.length>=2)break;}if(chosen.length>=2)break;}
+  const maxWarnings=area==="dashboard"?1:2;
+  for(const sev of ["danger","caution","info"]){for(const w of out.filter(x=>x.severity===sev)){if(!chosen.some(c=>c.text===w.text))chosen.push(w);if(chosen.length>=maxWarnings)break;}if(chosen.length>=maxWarnings)break;}
   return chosen.map(w=>'<div class="card" style="padding:13px 15px;margin-bottom:12px;background:'+w.bg+';border-color:'+w.color+'33"><div style="display:flex;gap:10px;align-items:flex-start"><span style="color:'+w.color+';display:flex;margin-top:1px">'+I.warn+'</span><div style="font-size:13.5px;line-height:1.45;color:var(--text);font-weight:650">'+w.text+'</div></div></div>').join("");
 }
 function upcomingBillsCard(limit){
@@ -1440,6 +1452,53 @@ function allSpendItems(m,filter){
   m.groups.forEach(g=>g.items.forEach(i=>{if(!filter||filter(g,i))out.push({g,i});}));
   return out;
 }
+function allTxnEntries(m){
+  const out=[]; if(!m||!m.groups)return out;
+  m.groups.forEach(g=>g.items.forEach(i=>{
+    (i.txns||[]).forEach(x=>out.push({gid:g.id,gname:g.name,iid:i.id,iname:i.name,bucket:itemBucket(i),tx:x}));
+  }));
+  return out.sort((a,b)=>(b.tx.date||"").localeCompare(a.tx.date||""));
+}
+function recentTransactionsHTML(m){
+  const q=String((S.settings&&S.settings.txnSearch)||"").trim().toLowerCase();
+  let entries=allTxnEntries(m);
+  if(q)entries=entries.filter(e=>[e.tx.note,e.iname,e.gname,e.tx.type].some(v=>String(v||"").toLowerCase().includes(q)));
+  const rows=entries.slice(0,18).map(e=>{
+    const typeLabel={flex:"Flexible",bill:"Bill",savings:"Savings",income:"Income"}[e.tx.type||"flex"]||"Flexible";
+    const isBill=e.bucket===G_FIXED||(e.tx.type==="bill");
+    return '<div class="irow" data-recenttx="'+e.gid+':'+e.iid+':'+e.tx.id+'" style="cursor:pointer">'
+      +'<div style="min-width:0"><div style="font-weight:850;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e.tx.note||e.iname)+'</div>'
+      +'<div style="font-size:11.5px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="color:'+(isBill?'var(--orange)':'var(--teal)')+';font-weight:750">'+esc(typeLabel)+'</span> · '+esc(e.iname)+' · '+esc(e.tx.date||'')+'</div></div>'
+      +'<div class="mono" style="font-weight:900;color:'+(isBill?'var(--orange)':'var(--text)')+'">'+fmtC(e.tx.amount||0)+'</div>'
+      +'</div>';
+  }).join("");
+  return '<div class="card" style="margin-top:16px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px"><div><div class="label">Recent spending</div><div style="font-size:12px;color:var(--dim);margin-top:3px">Search and edit logged transactions.</div></div><span class="mono" style="color:var(--dim);font-size:12px">'+entries.length+'</span></div>'
+    +'<input id="txnSearch" value="'+esc(S.settings.txnSearch||"")+'" placeholder="Search merchant, note, category..." style="width:100%;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;color:var(--text);padding:12px 14px;font-size:14px;outline:none;margin-bottom:10px">'
+    +(rows||'<div style="padding:18px 0;color:var(--dim);font-size:13px;line-height:1.5">'+(q?'No transactions match that search.':'No spending logged yet. Log a transaction to start tracking your safe-to-spend number.')+'</div>')
+    +'</div>';
+}
+function loadDemoBudget(){
+  const oldTheme=S.theme||"dark";
+  const now=todayLocal(); mk=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+  S={schemaVersion:CURRENT_SCHEMA,months:{},bills:[],debts:[],paychecks:[],moveHistory:[],settings:{...defaultSettings(),onboardingCompleted:true,paycheckMode:true,budgetMode:"monthly",payFrequency:"biweekly",nextPayday:"",payAmount:2450,monthlyIncome:4900,savingsGoal:400,weeklyLimit:260},lastBackup:null,theme:oldTheme,lastLog:null};
+  const nextPay=new Date(now); nextPay.setDate(nextPay.getDate()+10); S.settings.nextPayday=nextPay.toISOString().slice(0,10);
+  const m={income:[{id:nid(),name:"Take-home pay",amount:4900}],savings:[{id:nid(),name:"Emergency fund",amount:300},{id:nid(),name:"Vacation",amount:100}],groups:[{id:nid(),name:G_FIXED,items:[]},{id:nid(),name:G_FLEX,items:[]},{id:nid(),name:G_OTHER,items:[]}]};
+  S.months[mk]=m;
+  const billSeeds=[["Rent / Mortgage",1850,1,false],["Car payment",620,12,true],["Car insurance",210,15,true],["Phone",95,18,false],["Internet",80,22,true]];
+  billSeeds.forEach(([name,amount,dueDay,autopay])=>{const b={id:nid(),name,amount,dueDay,category:G_FIXED,recurring:true,autopay,notes:"Demo bill",paid:{}};S.bills.push(b);syncBillToBudget(b,mk);});
+  const flex=m.groups.find(g=>g.name===G_FLEX);
+  const addFlex=(name,planned,txns)=>{const i={id:nid(),name,planned,actual:0,txns:(txns||[]).map(x=>({id:nid(),date:x[0],amount:x[1],note:x[2],type:"flex"})),recurring:false,rollover:false};recalcItem(i);flex.items.push(i);};
+  const d=n=>{const x=new Date(now);x.setDate(Math.max(1,now.getDate()-n));return x.toISOString().slice(0,10);};
+  addFlex("Groceries",650,[[d(1),82,"Publix"],[d(4),146,"Walmart"]]);
+  addFlex("Gas",240,[[d(2),48,"Shell"]]);
+  addFlex("Eating out",220,[[d(0),18,"Lunch"],[d(5),44,"Dinner"]]);
+  addFlex("Household",180,[[d(3),36,"Target"]]);
+  addFlex("Personal",160,[]);
+  S.debts=[{id:nid(),name:"Credit Card",balance:1850,minPayment:65,apr:24.99,dueDate:20,extraPayment:125,strategy:"snowball"},{id:nid(),name:"Student Loan",balance:4200,minPayment:105,apr:6.5,dueDate:10,extraPayment:0,strategy:"avalanche"}];
+  S.paychecks=[{id:nid(),name:"Next paycheck",amount:2450,dateReceived:S.settings.nextPayday,coversStartDate:now.toISOString().slice(0,10),coversEndDate:S.settings.nextPayday,assignedBillIds:[],assignedFlexibleCategories:[],notes:"Auto-plan demo"}];
+  syncBillsFromBudget(m); commit(); toast("Demo budget loaded","var(--teal)");
+}
+
 
 
 // --- paycheck engine ---
@@ -1790,14 +1849,26 @@ function paycheckCardHTML(pc){
 }
 function dashMini(label,value,sub,color){return '<div style="background:var(--inset);border:1px solid var(--line);border-radius:13px;padding:10px"><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:5px">'+label+'</div><div class="mono" style="font-size:18px;font-weight:900;color:'+color+'">'+value+'</div><div style="font-size:10.5px;color:var(--dim);margin-top:2px">'+sub+'</div></div>';}
 function paycheckPlannerHTML(){
-  let h='<div class="card" style="margin-bottom:14px;background:var(--tealsoft);border-color:var(--tealb)"><div class="label" style="color:var(--teal)">Paycheck View</div><div style="font-size:13px;color:var(--dim);line-height:1.55;margin-top:7px">Plan what each paycheck has to cover before flexible spending.</div></div>';
-  const paychecks=S.paychecks||[];
-  if(!paychecks.length){
-    h+='<div style="text-align:center;padding:36px 24px;color:var(--dim)"><div style="font-weight:900;font-size:18px;color:var(--text);margin-bottom:6px">Plan by paycheck</div><div style="font-size:13px;line-height:1.55;margin-bottom:18px">Add your paydays to see what each check needs to cover.</div><button id="addPaycheck" class="btn btn-teal" style="max-width:320px;margin:0 auto;display:block">'+I.plus+' Add paycheck</button></div>';
-    return h;
+  const sp=safeUntilPayday();
+  let h='<div class="card" style="margin-bottom:14px;background:var(--tealsoft);border-color:var(--tealb)"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="label" style="color:var(--teal)">Paycheck View</div><div style="font-size:13px;color:var(--dim);line-height:1.55;margin-top:7px">Allotted automatically looks at your next payday, unpaid bills, and flexible spending. Manual paycheck cards are optional.</div></div><button id="paycheckSettings" class="btn btn-ghost" style="width:auto;flex:0 0 auto;padding:10px 12px;color:var(--text);font-size:12px">Setup</button></div></div>';
+  if(!sp||sp.needPay){
+    h+='<div class="card" style="text-align:center;padding:34px 22px"><div style="font-weight:950;font-size:19px;margin-bottom:6px">Set up paycheck planning</div><div style="font-size:13px;color:var(--dim);line-height:1.55;margin-bottom:18px">Add your next payday and paycheck amount to see what each check needs to cover.</div><button id="setupPaycheck" class="btn btn-teal" style="max-width:320px;margin:0 auto;display:block">Set payday</button></div>';
+  }else{
+    const info=sp.info; const bills=sp.bb?sp.bb.unpaid:[];
+    h+='<div class="card" style="padding:18px;margin-bottom:14px"><div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:13px"><div><div class="label">Next paycheck plan</div><div style="font-size:20px;font-weight:950;margin-top:5px">'+dateLabel(info.next)+'</div><div style="font-size:12.5px;color:var(--dim);margin-top:3px">'+sp.daysUntil+' day'+(sp.daysUntil!==1?'s':'')+' until payday</div></div><div class="mono" style="font-size:24px;font-weight:950;color:var(--teal)">'+fmt(sp.pay)+'</div></div>'
+      +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:12px">'
+      +dashMini("Bills before payday",fmt(sp.unpaidTotal),bills.length+" unpaid",sp.unpaidTotal>0?"var(--orange)":"var(--teal)")
+      +dashMini("Flexible spent",fmt(sp.spent),"this period","var(--text)")
+      +dashMini("Left after bills",fmt(sp.left),"paycheck money",sp.left<0?"var(--red)":"var(--teal)")
+      +dashMini("Safe until payday",fmt(sp.over?0:sp.perDay)+"/day",sp.daysUntil+" day"+(sp.daysUntil!==1?"s":""),sp.over?"var(--red)":"var(--teal)")
+      +'</div>'
+      +'<div style="font-size:12.5px;color:var(--dim);line-height:1.45;margin-bottom:8px">Bill money is protected first. Safe-to-spend only starts after unpaid bills and planned savings are covered.</div>'
+      +(bills.length?'<div style="height:1px;background:var(--line);margin:12px 0 8px"></div>'+bills.slice(0,4).map(o=>'<div class="irow" data-billedit="'+o.bill.id+'"><div><div style="font-weight:800;font-size:13px">'+esc(o.bill.name)+'</div><div style="font-size:11.5px;color:var(--dim);margin-top:2px">due '+dateLabel(o.date)+(o.bill.autopay?' · autopay':'')+'</div></div><div class="mono" style="font-weight:900">'+fmt(o.bill.amount||0)+'</div></div>').join(""): '<div style="font-size:13px;color:var(--dim);padding-top:4px">No unpaid bills before payday.</div>')
+      +'</div>';
   }
-  h+='<button id="addPaycheck" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Add paycheck</button>';
-  paychecks.slice().sort((a,b)=>(a.dateReceived||"").localeCompare(b.dateReceived||"")).forEach(pc=>h+=paycheckCardHTML(pc));
+  const paychecks=S.paychecks||[];
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 2px 10px"><div class="label">Manual paycheck cards</div><button id="addPaycheck" style="background:none;border:none;color:var(--teal);font-size:12px;font-weight:900">'+I.plus+' Add</button></div>';
+  h+=paychecks.length?paychecks.slice().sort((a,b)=>(a.dateReceived||"").localeCompare(b.dateReceived||"")).map(pc=>paycheckCardHTML(pc)).join(""):'<div class="card" style="padding:18px;color:var(--dim);font-size:13px;line-height:1.5">Optional: add manual paycheck cards only when you want to assign specific bills or categories to a specific check.</div>';
   return h;
 }
 function openPaycheckEdit(id){
@@ -1831,26 +1902,31 @@ function dashboardHTML(m,t){
     h+=warningCards("dashboard",m,t)+paycheckPlannerHTML()+'</div>';
     return h;
   }
-  const fb=feedbackLines(m,t);
   const mb=moneyBreakdown(m), zb=zeroStatus(m), sts=safeToSpend(m);
   h+=warningCards("dashboard",m,t);
-  h+='<div class="card" style="text-align:center;padding:20px 18px;margin-bottom:14px"><div style="color:var(--dim);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-bottom:6px">Safe to spend today</div><div class="mono" style="font-size:42px;font-weight:900;letter-spacing:-.03em;color:'+(sts&&sts.over?'var(--red)':'var(--teal)')+'">'+(sts?fmt(sts.over?0:sts.perDay):'—')+'</div><div style="font-size:12.5px;color:var(--dim);margin-top:8px;line-height:1.45">'+(sts?(sts.over?'You are over flexible spending by '+fmt(-sts.pool):'You can spend '+fmt(sts.perDay)+'/day and stay on plan. Bill money is not included.'):'Add flexible spending categories to calculate this.')+'</div></div>';
-  h+='<div class="card" style="padding:14px 16px;margin-bottom:14px"><div class="label" style="color:'+zb.color+'">Zero-based check</div><div style="font-size:17px;font-weight:900;margin-top:6px;color:'+zb.color+'">'+zb.label+'</div><div style="font-size:12.5px;color:var(--dim);line-height:1.45;margin-top:4px">'+zb.sub+'</div></div>';
-  h+='<div class="sheet-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  h+='<div class="card" style="text-align:center;padding:24px 18px 20px;margin-bottom:14px;background:linear-gradient(180deg,var(--tealsoft),var(--card));border-color:var(--tealb)">'
+    +'<div style="color:var(--teal);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:900;margin-bottom:6px">Safe to spend today</div>'
+    +'<div class="mono" style="font-size:52px;font-weight:950;letter-spacing:-.05em;line-height:.98;color:'+(sts&&sts.over?'var(--red)':'var(--teal)')+'">'+(sts?fmt(sts.over?0:sts.perDay):'—')+'</div>'
+    +'<div style="font-size:13px;color:var(--dim);margin-top:10px;line-height:1.5">'+(sts?(sts.over?'You are over flexible spending by '+fmt(-sts.pool)+'. Bill money is still protected.':'You can spend '+fmt(sts.perDay)+'/day and stay on plan. Bill money is not included.'):'Add flexible spending categories to calculate this.')+'</div>'
+    +'</div>';
+  h+=upcomingBillsCard(3);
+  h+='<div class="card" style="padding:14px 16px;margin-top:14px;margin-bottom:14px"><div class="label" style="color:'+zb.color+'">Zero-based check</div><div style="font-size:17px;font-weight:950;margin-top:6px;color:'+zb.color+'">'+zb.label+'</div><div style="font-size:12.5px;color:var(--dim);line-height:1.45;margin-top:4px">'+zb.sub+'</div></div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px">'
+    +dashMini("Bills locked",fmt(mb.fixed),"Protected",mb.fixed>0?"var(--teal)":"var(--dim)")
+    +dashMini("Flexible left",fmt(Math.max(0,mb.flexLeft)),"Spend pool",mb.flexLeft<0?"var(--red)":"var(--teal)")
+    +dashMini("Left to assign",fmt(mb.left),zb.state==="good"?"Done":"Needs job",zb.color)
+    +'</div>';
+  h+='<div style="display:flex;gap:10px;margin-top:4px"><button id="dashLog" class="btn btn-teal" style="flex:1">'+I.plus+' Log</button><button id="dashBills" class="btn btn-ghost" style="flex:1;color:var(--text)">Bills</button><button id="dashMove" class="btn btn-ghost" style="flex:1;color:var(--text)">Move</button></div>';
+  h+='<details style="margin-top:14px"><summary style="cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:800;padding:10px 2px">Show budget details</summary><div class="sheet-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">';
   if(m){
     h+=dashCard("Total income",fmt(mb.income),monthName(mk),"var(--text)");
-    h+=dashCard("Fixed bills locked",fmt(mb.fixed),"Reserved for recurring bills","var(--teal)");
     h+=dashCard("Savings assigned",fmt(mb.savings),mb.rate.toFixed(0)+"% savings rate","var(--purple)");
-    h+=dashCard("Flexible available",fmt(Math.max(0,mb.flexLeft)),"Bill money not included",mb.flexLeft<0?"var(--red)":"var(--teal)");
-    h+=dashCard("Left to assign",fmt(mb.left),zb.state==="good"?"every dollar has a job":"needs a job",zb.color);
+    h+=dashCard("Fixed bills locked",fmt(mb.fixed),"Reserved for recurring bills","var(--teal)");
+    h+=dashCard("Flexible planned",fmt(mb.flexPlan),"Daily spending pool","var(--text)");
     h+=dashCard("Spent so far",fmt(t.actual),"of "+fmt(t.planned)+" planned",t.actual>t.planned?"var(--red)":"var(--text)");
-  }else{
-    h+='</div><div style="text-align:center;padding:36px 20px;color:var(--dim);font-size:13px;line-height:1.6">No budget for '+monthName(mk)+' yet. Head to <b style="color:var(--teal)">Budget</b> to set one up.</div></div>';
-    return h;
+    h+=dashCard("Left to assign",fmt(mb.left),zb.state==="good"?"every dollar has a job":"needs a job",zb.color);
   }
-  h+='</div>';
-  h+=upcomingBillsCard(3);
-  h+='<div style="display:flex;gap:10px;margin-top:14px"><button id="dashLog" class="btn btn-teal" style="flex:1">'+I.plus+' Log spending</button><button id="dashBills" class="btn btn-ghost" style="flex:1;color:var(--text)">View bills</button></div>';
+  h+='</div></details>';
   h+='</div>';
   return h;
 }
@@ -2257,6 +2333,12 @@ function bind(){
   document.querySelectorAll("[data-payedit]").forEach(el=>el.onclick=()=>openPaycheckEdit(el.dataset.payedit));
   const wm=document.getElementById("weeklyMove");if(wm)wm.onclick=openMoveMoney;
   const wl=document.getElementById("weeklyLimit");if(wl)wl.onclick=openWeeklyLimit;
+  const wd=document.getElementById("wDemo");if(wd)wd.onclick=loadDemoBudget;
+  const dm=document.getElementById("dashMove");if(dm)dm.onclick=openMoveMoney;
+  const ps=document.getElementById("paycheckSettings");if(ps)ps.onclick=openPaycheckSettings;
+  const spc=document.getElementById("setupPaycheck");if(spc)spc.onclick=openPaycheckSettings;
+  const ts=document.getElementById("txnSearch");if(ts)ts.oninput=()=>{S.settings.txnSearch=ts.value;save();const pos=ts.selectionStart;render();setTimeout(()=>{const n=document.getElementById("txnSearch");if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(e){}}},0);};
+  document.querySelectorAll("[data-recenttx]").forEach(el=>el.onclick=()=>{const p=el.dataset.recenttx.split(":");openTxnEdit(p[0],p[1],p[2],()=>{closeModal();render();});});
   // --- v2: bills ---
   const ab=document.getElementById("addBill");if(ab)ab.onclick=()=>openBillEdit();
   document.querySelectorAll("[data-billedit]").forEach(el=>el.onclick=()=>openBillEdit(el.dataset.billedit));
