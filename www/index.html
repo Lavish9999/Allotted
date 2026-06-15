@@ -114,6 +114,9 @@ svg text{font-family:ui-monospace,'SF Mono',Menlo,monospace}
 .toggle-row input[type=checkbox]:checked{background:var(--teal)}
 .toggle-row input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:99px;background:#fff;transition:transform .18s}
 .toggle-row input[type=checkbox]:checked::after{transform:translateX(18px)}
+.dd-menu{margin-top:8px;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;max-height:240px;overflow:auto;padding:5px}
+.dd-row{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);font-family:inherit;font-size:14.5px;font-weight:600;padding:11px 12px;border-radius:9px;cursor:pointer}
+.dd-row:hover,.dd-row:active{background:var(--tealsoft);color:var(--teal)}
 </style>
 </head>
 <body>
@@ -252,10 +255,20 @@ function monthUntouched(m){
 }
 
 // ================= ui helpers =================
-function toast(msg,color){
+function toast(msg,color,action){
   document.querySelectorAll(".toast").forEach(t=>t.remove());
-  const t=document.createElement("div");t.className="toast";t.style.border="1px solid "+(color||"var(--teal)");t.textContent=msg;
-  document.body.appendChild(t);setTimeout(()=>t.remove(),3500);
+  const t=document.createElement("div");t.className="toast";t.style.border="1px solid "+(color||"var(--teal)");
+  if(action){
+    t.style.display="flex";t.style.alignItems="center";
+    const span=document.createElement("span");span.textContent=msg;t.appendChild(span);
+    const b=document.createElement("button");b.textContent=action.label;
+    b.style.cssText="margin-left:16px;background:none;border:none;color:var(--teal);font-weight:800;font-size:13.5px;font-family:inherit;cursor:pointer;text-decoration:underline;flex-shrink:0";
+    b.onclick=()=>{t.remove();action.fn();};
+    t.appendChild(b);
+  }else{
+    t.textContent=msg;
+  }
+  document.body.appendChild(t);setTimeout(()=>t.remove(),action?7000:3500);
 }
 const I={
   home:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
@@ -363,8 +376,8 @@ function render(){
     const moreActive=["more","debt","weekly","year"].includes(tab);
     html+='<div class="nav"><div class="nav-inner">'
     +'<button data-tab="dashboard" class="'+on("dashboard")+'">'+I.home+(tab==="dashboard"?'<span>Home</span>':'')+'</button>'
-    +'<button data-tab="budget" class="'+on("budget")+'">'+I.cal+(tab==="budget"?'<span>Budget</span>':'')+'</button>'
-    +'<button data-tab="track" class="'+on("track")+'">'+I.list+(tab==="track"?'<span>Track</span>':'')+'</button>'
+    +'<button data-tab="budget" class="'+on("budget")+'">'+I.wallet+(tab==="budget"?'<span>Budget</span>':'')+'</button>'
+    +'<button data-tab="track" class="'+on("track")+'">'+I.list+(tab==="track"?'<span>Spend</span>':'')+'</button>'
     +'<button data-tab="bills" class="'+on("bills")+'">'+I.receipt+(tab==="bills"?'<span>Bills</span>':'')+'</button>'
     +'<button data-tab="more" class="'+(moreActive?"on":"")+'">'+I.grid+(moreActive?'<span>More</span>':'')+'</button>'
     +'</div></div>';
@@ -380,9 +393,9 @@ function welcomeHTML(){
     +'<div style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px">Allotted</div>'
     +'<div style="color:var(--teal);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:20px">Give every dollar a job</div>'
     +'<div style="color:var(--dim);font-size:13.5px;line-height:1.65;margin-bottom:22px">At the start of each month, give every dollar of income a job. Then track what you spend and watch each category drain down. Everything stays on this device.</div>'
-    +'<button id="wOnboard" class="btn btn-teal" style="margin-bottom:10px">Let\u2019s build your first budget</button>'
-    +'<button id="wBlank" class="btn btn-ghost" style="margin-bottom:10px;color:var(--text)">Skip \u2014 start from scratch</button>'
-    +'<button id="wImport" class="btn btn-ghost" style="color:var(--text)">Restore from a backup</button>'
+    +'<button id="wOnboard" class="btn btn-teal" style="margin-bottom:10px">Build my first budget</button>'
+    +'<button id="wBlank" class="btn btn-ghost" style="margin-bottom:10px;color:var(--text)">Enter app without setup</button>'
+    +'<button id="wImport" class="btn btn-ghost" style="color:var(--text)">Restore from backup</button>'
     +'</div>';
 }
 
@@ -395,11 +408,11 @@ function startOnboarding(){
   OB={step:1,income:"",freq:"biweekly",payday:"",pay:"",bills:[],cats:["Groceries","Gas","Eating out","Fun"],goal:""};
   obRender();
 }
-function obNav(back,lastLabel){
+function obNav(back,lastLabel,hideSkip){
   return '<div style="display:flex;gap:10px;margin-top:20px">'
     +(back?'<button id="obBack" class="btn btn-ghost" style="flex:0 0 auto;width:auto;padding:14px 22px;color:var(--text)">Back</button>':'')
     +'<button id="obNext" class="btn btn-teal" style="flex:1 1 auto;width:auto;min-width:0">'+(lastLabel||"Next")+'</button></div>'
-    +'<button id="obSkip" class="btn btn-ghost" style="color:var(--dim);margin-top:10px;font-size:13px">Skip setup</button>';
+    +(hideSkip?'':'<button id="obSkip" class="btn btn-ghost" style="color:var(--dim);margin-top:10px;font-size:13px">Skip setup</button>');
 }
 function obIncome(){
   return '<div class="ob-sub">Start with your income. About how much money comes in each month, after taxes?</div>'
@@ -409,11 +422,12 @@ function obIncome(){
 function obPay(){
   const opts=[["weekly","Weekly"],["biweekly","Every 2 weeks"],["semimonthly","Twice a month"],["monthly","Monthly"],["custom","Custom"]];
   const chips=opts.map(o=>'<button data-obfreq="'+o[0]+'" class="ob-chip'+(OB.freq===o[0]?" on":"")+'">'+o[1]+'</button>').join("");
-  return '<div class="ob-sub">This powers the \u201cwhat can I spend until payday\u201d view. Not sure? Skip the dates for now.</div>'
+  return '<div class="ob-sub">This helps Allotted show what you can spend until your next payday. You can skip this for now.</div>'
     +'<div class="ob-chips" style="margin-bottom:16px">'+chips+'</div>'
     +fieldHTML("obPayday","Next payday",OB.payday,"date","")
     +fieldHTML("obPay","Amount per paycheck (optional)",OB.pay,"number","e.g. 1600")
-    +obNav(true);
+    +'<button id="obSkipStep" class="btn btn-ghost" style="color:var(--teal);border:1px solid var(--tealb);margin-top:2px;margin-bottom:2px">Skip \u2014 I don\u2019t need paycheck planning</button>'
+    +obNav(true,"Next",true);
 }
 function obBills(){
   const have=OB.bills.map(b=>(b.name||"").toLowerCase());
@@ -425,10 +439,10 @@ function obBills(){
     +'<input id="obBa'+i+'" value="'+esc(b.amount||"")+'" inputmode="decimal" placeholder="$" class="ob-in" style="flex:1;min-width:0">'
     +'<input id="obBd'+i+'" value="'+esc(b.day||"")+'" inputmode="numeric" placeholder="Day" class="ob-in" style="width:52px;flex:0 0 auto">'
     +'<button data-obdelbill="'+i+'" class="ob-del">'+I.x+'</button></div>').join("");
-  return '<div class="ob-sub">Add bills you know are coming \u2014 rent, car payment, phone, subscriptions. Set the day of the month each is due.</div>'
-    +(sugg?'<div class="ob-chips" style="margin-bottom:14px">'+sugg+'</div>':'')
-    +(rows||'<div style="color:var(--dim);font-size:13px;margin-bottom:8px">No bills added yet.</div>')
-    +'<button id="obAddBill" class="addline" style="margin-top:6px">'+I.plus+' Add a bill</button>'
+  return '<div class="ob-sub">Add bills you know are coming \u2014 rent, car payment, phone, subscriptions. Tap one below to add it, then set the amount and due day.</div>'
+    +(OB.bills.length?'<div class="label" style="margin-bottom:8px">Added \u00b7 '+OB.bills.length+'</div>'+rows+'<div style="height:14px"></div>':'')
+    +(sugg?'<div style="font-size:12px;color:var(--dim);margin-bottom:8px">'+(OB.bills.length?'Add more:':'Tap to add:')+'</div><div class="ob-chips" style="margin-bottom:14px">'+sugg+'</div>':'')
+    +'<button id="obAddBill" class="addline" style="margin-top:2px">'+I.plus+' Add a custom bill</button>'
     +obNav(true);
 }
 function obCats(){
@@ -439,22 +453,37 @@ function obCats(){
     +'<div style="display:flex;gap:8px"><input id="obNewCat" placeholder="Add your own" class="ob-in" style="flex:1;min-width:0"><button id="obAddCat" class="btn btn-ghost" style="width:auto;flex:0 0 auto;padding:11px 18px;color:var(--text)">Add</button></div>'
     +obNav(true);
 }
-function obGoal(){
-  return '<div class="ob-sub">Want to set money aside each month? Add a savings goal, or skip it.</div>'
+function freqLabel(f){return {weekly:"Weekly",biweekly:"Every 2 weeks",semimonthly:"Twice a month",monthly:"Monthly",custom:"Custom"}[f]||"Every 2 weeks";}
+function obReview(){
+  const income=parseFloat(OB.income)||0;
+  const bills=OB.bills.filter(b=>b.name&&b.name.trim());
+  const billSum=bills.reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
+  const cats=OB.cats.filter(c=>c&&c.trim());
+  const sumRow=(label,val,c)=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)"><span style="color:var(--dim);font-size:13px">'+label+'</span><span style="font-weight:700;font-size:13.5px;color:'+(c||"var(--text)")+'">'+val+'</span></div>';
+  return '<div class="ob-sub">Here\u2019s what Allotted will set up. You can change anything later.</div>'
+    +'<div style="margin-bottom:18px">'
+    +sumRow("Monthly income",income?fmt(income):"\u2014",income?"var(--teal)":"var(--dim)")
+    +sumRow("Paycheck planning",OB.payday?("On \u00b7 "+freqLabel(OB.freq)):"Off")
+    +sumRow("Bills",bills.length?(bills.length+" \u00b7 "+fmt(billSum)+"/mo"):"None yet")
+    +sumRow("Spending categories",cats.length?cats.join(", "):"Just \u201cOther\u201d")
+    +'</div>'
     +fieldHTML("obGoal","Monthly savings goal (optional)",OB.goal,"number","e.g. 200","")
-    +'<div style="font-size:12px;color:var(--dim);margin-top:8px;line-height:1.55">When you finish, Allotted builds your first month from these answers \u2014 income, bills, and categories ready to go.</div>'
     +obNav(true,"Done \u2014 build my budget");
 }
 function obRender(){
-  const dots='<div style="display:flex;gap:6px;justify-content:center;margin-bottom:18px">'
-    +[1,2,3,4,5].map(i=>'<span style="width:7px;height:7px;border-radius:99px;background:'+(i<=OB.step?'var(--teal)':'var(--line)')+'"></span>').join("")+'</div>';
-  let title="",body="";
-  if(OB.step===1){title="Let\u2019s build your first budget";body=obIncome();}
-  else if(OB.step===2){title="When do you get paid?";body=obPay();}
-  else if(OB.step===3){title="Add your bills";body=obBills();}
-  else if(OB.step===4){title="What do you spend on?";body=obCats();}
-  else{title="One last thing";body=obGoal();}
-  sheet(title,dots+body);
+  const titles=["Add your monthly income","Want paycheck planning?","Add your bills","Choose spending categories","Review your setup"];
+  const top='<div style="text-align:center;margin-bottom:16px">'
+    +'<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;margin-bottom:10px">Step '+OB.step+' of 5</div>'
+    +'<div style="display:flex;gap:6px;justify-content:center">'
+    +[1,2,3,4,5].map(i=>'<span style="width:7px;height:7px;border-radius:99px;background:'+(i<=OB.step?'var(--teal)':'var(--line)')+'"></span>').join("")
+    +'</div></div>';
+  let body="";
+  if(OB.step===1)body=obIncome();
+  else if(OB.step===2)body=obPay();
+  else if(OB.step===3)body=obBills();
+  else if(OB.step===4)body=obCats();
+  else body=obReview();
+  sheet(titles[OB.step-1],top+body);
   obWire();
 }
 // pull the current step's inputs into OB before any navigation/re-render
@@ -472,6 +501,7 @@ function obWire(){
   const nx=document.getElementById("obNext");if(nx)nx.onclick=obNext;
   const bk=document.getElementById("obBack");if(bk)bk.onclick=obBack;
   const sk=document.getElementById("obSkip");if(sk)sk.onclick=obSkip;
+  const sks=document.getElementById("obSkipStep");if(sks)sks.onclick=()=>{OB.payday="";OB.pay="";obNext();};
   document.querySelectorAll("[data-obfreq]").forEach(b=>b.onclick=()=>{obReadStep();OB.freq=b.dataset.obfreq;obRender();});
   document.querySelectorAll("[data-obaddbill]").forEach(b=>b.onclick=()=>{obReadStep();const p=b.dataset.obaddbill.split("|");OB.bills.push({name:p[0],amount:"",day:parseInt(p[1])||1});obRender();});
   const ab=document.getElementById("obAddBill");if(ab)ab.onclick=()=>{obReadStep();OB.bills.push({name:"",amount:"",day:""});obRender();};
@@ -489,13 +519,12 @@ function obFinish(){
     savings:[{id:nid(),name:"Savings",amount:goal}],
     groups:[]
   };
-  const billItems=cleanBills.map(b=>({id:nid(),name:b.name.trim(),planned:parseFloat(b.amount)||0,actual:0,txns:[],recurring:true}));
-  if(billItems.length)month.groups.push({id:nid(),name:"Bills",items:billItems});
+  // selected spending categories become real budget lines, plus a catch-all "Other"
   const catItems=OB.cats.filter(c=>c&&c.trim()).map(c=>({id:nid(),name:c.trim(),planned:0,actual:0,txns:[],recurring:false}));
+  catItems.push({id:nid(),name:"Other",planned:0,actual:0,txns:[],recurring:false});
   month.groups.push({id:nid(),name:"Spending",items:catItems});
-  month.groups.push({id:nid(),name:"Other",items:[]});
   S.months[mk]=month;
-  // first-class bills list (kept separate from envelopes, per product decision)
+  // bills live in the first-class Bills list only (not duplicated as budget envelopes)
   S.bills=cleanBills.map(b=>({id:nid(),name:b.name.trim(),amount:parseFloat(b.amount)||0,dueDay:Math.min(31,Math.max(1,parseInt(b.day)||1)),category:"",recurring:true,notes:"",paid:{}}));
   // settings
   S.settings.onboardingCompleted=true;
@@ -553,7 +582,7 @@ function headerHTML(t,m){
     +'<button data-mnav="-1" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">'+I.left+'</button>'
     +'<button id="mpick" style="font-weight:800;font-size:16px;min-width:150px;text-align:center;background:none;border:none;color:var(--text);padding:5px 6px;border-radius:9px;font-family:inherit;letter-spacing:-.01em">'+monthName(mk)+'</button>'
     +'<button data-mnav="1" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">'+I.right+'</button></div>'
-    +'<button id="settingsBtn" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:34px;height:34px;display:flex;align-items:center;justify-content:center">'+I.gear+'</button></div>'
+    +(tab==="dashboard"?'<button id="settingsBtn" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:99px;width:34px;height:34px;display:flex;align-items:center;justify-content:center">'+I.gear+'</button>':'<div style="width:34px"></div>')+'</div>'
     +(((tab==="budget"||tab==="track"))?(m?heroBlockHTML(t)
       :'<div style="color:var(--dim);font-size:13px">No budget for this month yet.</div>'):'')
     +'</div></div>';
@@ -604,13 +633,18 @@ function heroBlockHTML(t){
       +'<div>income <span style="color:var(--text);font-weight:700">'+fmt(t.income)+'</span></div>'
       +'</div></div>';
   }
+  const hasIncome=t.income>0;
   const zero=Math.abs(t.remaining)<0.5;
   const over=t.remaining<-0.5;
-  const remColor=zero?"var(--teal)":over?"var(--red)":"var(--orange)";
-  const remGlow=zero?"rgba(45,212,191,.45)":over?"rgba(248,113,113,.4)":"rgba(245,155,69,.4)";
-  const remNote=zero?"every dollar has a job ✓":over?"over-allocated — trim "+fmt(-t.remaining):"left to give a job";
+  const allAssigned=hasIncome&&zero;
+  const remColor=!hasIncome?"var(--dim)":allAssigned?"var(--teal)":over?"var(--red)":"var(--orange)";
+  const remGlow=!hasIncome?"transparent":allAssigned?"rgba(45,212,191,.45)":over?"rgba(248,113,113,.4)":"rgba(245,155,69,.4)";
+  const remNote=!hasIncome?"Add income to start assigning your money."
+    :allAssigned?"every dollar has a job ✓"
+    :over?"over-assigned — trim "+fmt(-t.remaining)
+    :"left to assign";
   return '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px"><div>'
-    +'<div style="color:var(--dim);font-size:11px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;font-weight:600">Remaining to allocate</div>'
+    +'<div style="color:var(--dim);font-size:11px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;font-weight:600">Left to Assign</div>'
     +'<div id="heroNum" data-to="'+t.remaining+'" data-key="budget-'+mk+'" class="mono" style="font-size:48px;font-weight:700;letter-spacing:-.03em;line-height:1;color:'+remColor+';text-shadow:0 0 26px '+remGlow+'">'+fmt(t.remaining)+'</div>'
     +'<div style="margin-top:8px;font-size:12.5px;color:var(--dim)">'+remNote+'</div></div>'
     +'<div class="mono" style="text-align:right;font-size:12.5px;line-height:1.9;color:var(--dim)">'
@@ -701,7 +735,7 @@ function trackHTML(m,t){
   h+='<button id="logTxn" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Log a transaction</button>';
   const hasLines=m.groups.some(g=>g.items.length);
   if(!hasLines){
-    h+='<div style="text-align:center;padding:30px 20px;color:var(--dim);font-size:13px;line-height:1.6">No budget lines yet.<br>Allocate your month on the <b style="color:var(--teal)">Budget</b> tab first, then track spending here.</div>';
+    h+='<div style="text-align:center;padding:30px 20px;color:var(--dim);font-size:13px;line-height:1.6">No spending categories yet.<br>Add categories on the <b style="color:var(--teal)">Budget</b> tab first, then track spending here.</div>';
     return h;
   }
   let dueRec=0;m.groups.forEach(g=>g.items.forEach(i=>{if(i.recurring&&((i.planned||0)-(i.actual||0))>0.5)dueRec++;}));
@@ -837,26 +871,36 @@ function markPaid(gid,iid){
   const due=(i.planned||0)-(i.actual||0);
   if(due<=0.5){toast(i.name+" is already at plan","var(--orange)");return;}
   i.txns=i.txns||[];
-  i.txns.push({id:nid(),date:new Date().toISOString().slice(0,10),amount:due,note:"Paid in full"});
-  recalcItem(i);commit();
-  toast("Paid "+fmtC(due)+" · "+esc(i.name),"var(--teal)");
+  const tx={id:nid(),date:new Date().toISOString().slice(0,10),amount:due,note:"Paid in full"};
+  i.txns.push(tx);
+  recalcItem(i);lastBulkPay={mk,batch:[{gid,iid,txid:tx.id}]};commit();
+  toast("Paid "+fmtC(due)+" · "+esc(i.name),"var(--teal)",{label:"Undo",fn:undoBulkPay});
 }
 
+let lastBulkPay=null;
+function undoBulkPay(){
+  if(!lastBulkPay)return;
+  const m=S.months[lastBulkPay.mk];
+  if(m){lastBulkPay.batch.forEach(b=>{const g=m.groups.find(x=>x.id===b.gid);const i=g&&g.items.find(x=>x.id===b.iid);if(i){i.txns=(i.txns||[]).filter(t=>t.id!==b.txid);recalcItem(i);}});}
+  lastBulkPay=null;
+  commit();toast("Undone — marked unpaid again","var(--orange)");
+}
 function payAllRecurring(){
   const m=M();if(!m)return;
-  let count=0,sum=0;const today=new Date().toISOString().slice(0,10);
+  let batch=[],sum=0;const today=new Date().toISOString().slice(0,10);
   m.groups.forEach(g=>g.items.forEach(i=>{
     const due=(i.planned||0)-(i.actual||0);
-    if(i.recurring&&due>0.5){i.txns=i.txns||[];i.txns.push({id:nid(),date:today,amount:due,note:"Paid in full"});recalcItem(i);count++;sum+=due;}
+    if(i.recurring&&due>0.5){i.txns=i.txns||[];const tx={id:nid(),date:today,amount:due,note:"Paid in full"};i.txns.push(tx);recalcItem(i);batch.push({gid:g.id,iid:i.id,txid:tx.id});sum+=due;}
   }));
-  if(!count){toast("No recurring bills due","var(--orange)");return;}
-  commit();toast("Logged "+count+" bill"+(count>1?'s':'')+" · "+fmtC(sum)+" paid","var(--teal)");
+  if(!batch.length){toast("No recurring bills due","var(--orange)");return;}
+  lastBulkPay={mk,batch};
+  commit();toast("Logged "+batch.length+" bill"+(batch.length>1?'s':'')+" · "+fmtC(sum)+" paid","var(--teal)",{label:"Undo",fn:undoBulkPay});
 }
 
 function openTxnPicker(){
   const m=M();if(!m)return;
   const cats=m.groups.filter(g=>g.items.length);
-  if(!cats.length){toast("Add budget lines on the Budget tab first","var(--orange)");return;}
+  if(!cats.length){toast("Add spending categories on the Budget tab first","var(--orange)");return;}
   const today=new Date().toISOString().slice(0,10);
   const sel="width:100%;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;color:var(--text);padding:12px 14px;font-size:15px;outline:none;-webkit-appearance:none;appearance:none";
   let defGid=cats[0].id,defIid=null;
@@ -968,7 +1012,7 @@ function openEditEntry(kind,gid,iid){
   sheet("Edit line",
     fieldHTML("e_name","Name",item.name)
     +(isSpend
-      ?fieldHTML("e_planned","Planned ($)",item.planned,"number","0","Log spending from the Track tab")
+      ?fieldHTML("e_planned","Planned ($)",item.planned,"number","0","Log spending from the Spend tab")
        +'<button id="e_rec" type="button" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:10px;color:var(--text);font-size:14px"><span style="display:flex;align-items:center;gap:8px">'+I.repeat+' Recurring monthly bill</span><span id="e_recState" style="font-weight:800;color:'+(item.recurring?'var(--teal)':'var(--dim)')+'">'+(item.recurring?'ON':'OFF')+'</span></button>'
        +'<button id="e_roll" type="button" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:4px;color:var(--text);font-size:14px"><span style="display:flex;align-items:center;gap:8px">'+I.up+' Roll over unused money</span><span id="e_rollState" style="font-weight:800;color:'+(item.rollover?'var(--teal)':'var(--dim)')+'">'+(item.rollover?'ON':'OFF')+'</span></button>'
        +'<div style="font-size:11px;color:var(--dim);margin-bottom:13px;line-height:1.5">On: leftover carries into next month (good for car maintenance, Christmas, clothes). Off: resets each month (groceries, gas, fun).</div>'
@@ -1021,16 +1065,33 @@ function openAddEntry(kind,gid){
   };
 }
 
+const CATEGORY_PRESETS=["Groceries","Eating Out","Coffee","Gas","Transportation","Car Payment","Car Insurance","Rent","Mortgage","Utilities","Electric","Water","Internet","Phone","Health","Medical","Fitness","Personal Care","Clothing","Household","Home Maintenance","Entertainment","Subscriptions","Fun Money","Hobbies","Travel","Gifts","Kids","Childcare","Education","Pets","Pet Food","Charity","Beauty","Misc"];
 function openAddGroup(){
   const m=M();if(!m)return;
-  sheet("Add category",
-    fieldHTML("g_name","Category name","","text","e.g. Kids")
-    +'<button id="gGo" class="btn btn-teal">Add category</button>');
-  document.getElementById("gGo").onclick=()=>{
-    const name=document.getElementById("g_name").value;if(!name)return;
-    m.groups.push({id:nid(),name,items:[]});
-    closeModal();commit();
-  };
+  const recompute=()=>{const used=new Set();m.groups.forEach(g=>g.items.forEach(i=>used.add((i.name||"").toLowerCase())));return CATEGORY_PRESETS.filter(p=>!used.has(p.toLowerCase()));};
+  const fieldStyle="width:100%;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;color:var(--text);padding:13px 14px;font-size:15px;font-family:inherit;display:flex;align-items:center;justify-content:space-between;cursor:pointer";
+  const menuRows=list=>list.map(p=>'<button type="button" data-pick="'+esc(p)+'" class="dd-row">'+esc(p)+'</button>').join("")||'<div style="padding:14px;color:var(--dim);font-size:13px;text-align:center">All common categories added \u2014 type your own below.</div>';
+  sheet("Add a category",
+    '<div class="ob-sub" style="margin-bottom:14px">Pick from the list or type your own. They show up under Spend.</div>'
+    +'<label class="field" style="margin-bottom:0"><span>Category</span>'
+    +'<button id="ddField" type="button" style="'+fieldStyle+'"><span id="ddLabel" style="color:var(--dim)">Choose a category</span><span id="ddChev" style="color:var(--dim);display:flex;transition:transform .2s">'+I.down+'</span></button></label>'
+    +'<div id="ddMenu" class="dd-menu" style="display:none">'+menuRows(recompute())+'</div>'
+    +'<div style="text-align:center;color:var(--dim);font-size:12px;margin:14px 0 12px;letter-spacing:.04em">\u2014 or \u2014</div>'
+    +'<div style="display:flex;gap:8px"><input id="g_name" placeholder="Add your own" class="ob-in" style="flex:1;min-width:0"><button id="g_addCustom" class="btn btn-teal" style="width:auto;flex:0 0 auto;padding:11px 20px">Add</button></div>'
+    +'<div id="g_added"></div>'
+    +'<button id="ddDone" class="btn btn-ghost" style="margin-top:18px;color:var(--text)">Done</button>');
+  const target=()=>{let g=m.groups.find(x=>x.name==="Spending");if(!g)g=m.groups[0];if(!g){g={id:nid(),name:"Spending",items:[]};m.groups.push(g);}return g;};
+  const added=[];
+  const refreshAdded=()=>{const el=document.getElementById("g_added");if(el)el.innerHTML=added.length?('<div style="margin-top:16px;font-size:12.5px;color:var(--teal);line-height:1.6;display:flex;align-items:flex-start;gap:6px"><span style="display:flex;margin-top:1px">'+I.check+'</span><span>Added: '+added.map(esc).join(", ")+'</span></div>'):'';};
+  const rebuildMenu=()=>{const mn=document.getElementById("ddMenu");if(mn){mn.innerHTML=menuRows(recompute());wireRows();}};
+  const addCat=name=>{name=(name||"").trim();if(!name)return false;target().items.push({id:nid(),name,planned:0,actual:0,txns:[],recurring:false});added.push(name);commit();refreshAdded();toast("Added "+esc(name),"var(--teal)");return true;};
+  const field=document.getElementById("ddField"), menu=document.getElementById("ddMenu"), chev=document.getElementById("ddChev");
+  let open=false;
+  field.onclick=()=>{open=!open;menu.style.display=open?"block":"none";chev.style.transform=open?"rotate(180deg)":"";};
+  function wireRows(){document.querySelectorAll("#ddMenu [data-pick]").forEach(b=>b.onclick=()=>{addCat(b.dataset.pick);rebuildMenu();});}
+  wireRows();
+  document.getElementById("g_addCustom").onclick=()=>{const e=document.getElementById("g_name");if(addCat(e.value)){e.value="";rebuildMenu();}else toast("Type a name first","var(--orange)");};
+  document.getElementById("ddDone").onclick=closeModal;
 }
 
 function openReorder(){
@@ -1230,7 +1291,11 @@ function billsHTML(){
     h+='<div style="text-align:center;padding:46px 24px;color:var(--dim)">'
       +'<div style="opacity:.35;margin-bottom:14px;display:flex;justify-content:center">'+I.receipt+'</div>'
       +'<div style="font-size:14px;line-height:1.6;margin-bottom:22px">No bills yet.<br><span style="font-size:12.5px">Add your rent, car payment, subscriptions, or anything due monthly.</span></div>'
-      +'<button id="addBill" class="btn btn-teal" style="max-width:300px;margin:0 auto;display:block">'+I.plus+' Add your first bill</button></div></div>';
+      +'<button id="addBill" class="btn btn-teal" style="max-width:300px;margin:0 auto 16px;display:block">'+I.plus+' Add your first bill</button>'
+      +'<div style="font-size:12px;color:var(--dim);margin-bottom:10px">Or tap a common bill:</div>'
+      +'<div class="ob-chips" style="justify-content:center;max-width:340px;margin:0 auto">'
+      +[["Rent",1],["Car payment",5],["Phone",15],["Insurance",10],["Internet",20],["Electric",25]].map(b=>'<button data-billsugg="'+esc(b[0])+'|'+b[1]+'" class="ob-chip">+ '+esc(b[0])+'</button>').join("")
+      +'</div></div></div>';
     return h;
   }
   const totalMonthly=bills.reduce((s,b)=>s+(b.amount||0),0);
@@ -1256,9 +1321,9 @@ function billsHTML(){
   h+='</div></div></div>';
   return h;
 }
-function openBillEdit(id){
+function openBillEdit(id,prefill){
   const editing=(S.bills||[]).find(x=>x.id===id);
-  const b=editing||{name:"",amount:"",dueDay:"",recurring:true,notes:""};
+  const b=editing||{name:(prefill&&prefill.name)||"",amount:"",dueDay:(prefill&&prefill.dueDay)||"",recurring:true,notes:""};
   sheet(editing?"Edit bill":"Add a bill",
     fieldHTML("bl_name","Bill name",b.name,"text","e.g. Rent")
     +'<div style="display:flex;gap:10px"><div style="flex:1.2">'+fieldHTML("bl_amt","Amount ($)",b.amount,"number","0")+'</div><div style="flex:1">'+fieldHTML("bl_day","Due day (1-31)",b.dueDay,"number","1")+'</div></div>'
@@ -1616,7 +1681,7 @@ function openSettings(){
     }
     S.months={};S.bills=[];S.debts=[];S.settings=defaultSettings();S.lastBackup=null;tab="budget";
     const now=new Date();mk=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
-    closeModal();commit();toast("Starting fresh — pick an option to begin");
+    closeModal();commit();
   };
 }
 
@@ -1712,6 +1777,7 @@ function bind(){
   // --- v2: bills ---
   const ab=document.getElementById("addBill");if(ab)ab.onclick=()=>openBillEdit();
   document.querySelectorAll("[data-billedit]").forEach(el=>el.onclick=()=>openBillEdit(el.dataset.billedit));
+  document.querySelectorAll("[data-billsugg]").forEach(el=>el.onclick=()=>{const p=el.dataset.billsugg.split("|");openBillEdit(null,{name:p[0],dueDay:parseInt(p[1])||1});});
   document.querySelectorAll("[data-billpaid]").forEach(el=>el.onclick=e=>{e.stopPropagation();toggleBillPaid(el.dataset.billpaid);});
   // --- v2: debts ---
   const adb=document.getElementById("addDebt");if(adb)adb.onclick=()=>openDebtEdit();
