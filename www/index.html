@@ -117,6 +117,8 @@ svg text{font-family:ui-monospace,'SF Mono',Menlo,monospace}
 .dd-menu{margin-top:8px;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;max-height:240px;overflow:auto;padding:5px}
 .dd-row{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);font-family:inherit;font-size:14.5px;font-weight:600;padding:11px 12px;border-radius:9px;cursor:pointer}
 .dd-row:hover,.dd-row:active{background:var(--tealsoft);color:var(--teal)}
+.catopt{display:block;width:100%;text-align:left;background:var(--inputbg);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;cursor:pointer}
+.catopt.on{background:var(--tealsoft);border-color:var(--tealb);color:var(--teal)}
 </style>
 </head>
 <body>
@@ -131,6 +133,7 @@ const fmt=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maxi
 const fmtC=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2}).format(n);
 const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 let uid=0; const nid=()=>"i"+Date.now()+"-"+(uid++);
+const ordinal=n=>{n=parseInt(n)||0;const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);};
 
 function templateMonth(){
   const it=(name,planned,rec)=>({id:nid(),name,planned:planned||0,actual:0,txns:[],recurring:!!rec});
@@ -153,7 +156,7 @@ function blankMonth(){
   return {
     income:[{id:nid(),name:"Take-home pay",amount:0}],
     savings:[{id:nid(),name:"Savings",amount:0}],
-    groups:[{id:nid(),name:"Other",items:[]}],
+    groups:[{id:nid(),name:G_FIXED,items:[]},{id:nid(),name:G_FLEX,items:[]},{id:nid(),name:G_OTHER,items:[]}],
   };
 }
 
@@ -192,7 +195,37 @@ function applyTheme(){
   if(mc)mc.setAttribute("content",S.theme==="light"?"#F2F5F6":"#0B0E10");
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
-function commit(){save();render();}
+// ---- spend buckets: recurring => Fixed Bills, flexible => Monthly Expenses, fallback => Other ----
+const G_FIXED="Fixed Bills", G_FLEX="Monthly Expenses", G_OTHER="Other";
+const FIXED_HINTS=["rent","mortgage","car payment","car insurance","insurance","phone","internet","utilit","electric","water","subscription","loan","streaming","cable","gym","membership"];
+function looksFixed(name){const n=(name||"").toLowerCase();return FIXED_HINTS.some(h=>n.includes(h));}
+function itemBucket(i){
+  if(i.recurring||(i.dueDay>0))return G_FIXED;
+  if(i.bucket===G_OTHER)return G_OTHER;
+  return G_FLEX;
+}
+// reorganize a month's spend into the three canonical buckets (idempotent)
+function normalizeBuckets(m){
+  if(!m||!m.groups)return;
+  const all=[];
+  m.groups.forEach(g=>g.items.forEach(i=>{
+    // remember items the user had explicitly parked in "Other"
+    if(g.name===G_OTHER && !i.recurring && !(i.dueDay>0) && !i.bucket) i.bucket=G_OTHER;
+    all.push(i);
+  }));
+  const keep=name=>{const g=m.groups.find(x=>x.name===name);return {id:(g&&g.id)||nid(),name,items:[]};};
+  const fixed=keep(G_FIXED), flex=keep(G_FLEX), other=keep(G_OTHER);
+  all.forEach(i=>{const b=itemBucket(i);(b===G_FIXED?fixed:b===G_OTHER?other:flex).items.push(i);});
+  m.groups=[fixed,flex,other];
+}
+// add an item into whichever bucket it belongs to (creating the bucket if needed)
+function placeItem(m,item){
+  const target=itemBucket(item);
+  let g=m.groups.find(x=>x.name===target);
+  if(!g){g={id:nid(),name:target,items:[]};m.groups.push(g);}
+  g.items.push(item);
+}
+function commit(){const m=M();if(m)normalizeBuckets(m);save();render();}
 
 const M=()=>S.months[mk]||null;
 
@@ -209,6 +242,7 @@ function migrate(){
       }
       recalcItem(i);
     }));
+    normalizeBuckets(m); // organize into Fixed Bills / Monthly Expenses / Other
   });
   // schema v2: first-class bills/debts + settings (paycheck, onboarding)
   if(!Array.isArray(S.bills))S.bills=[];
@@ -519,10 +553,11 @@ function obFinish(){
     savings:[{id:nid(),name:"Savings",amount:goal}],
     groups:[]
   };
-  // selected spending categories become real budget lines, plus a catch-all "Other"
+  // selected spending categories are flexible -> Monthly Expenses; Fixed Bills starts empty
   const catItems=OB.cats.filter(c=>c&&c.trim()).map(c=>({id:nid(),name:c.trim(),planned:0,actual:0,txns:[],recurring:false}));
-  catItems.push({id:nid(),name:"Other",planned:0,actual:0,txns:[],recurring:false});
-  month.groups.push({id:nid(),name:"Spending",items:catItems});
+  month.groups.push({id:nid(),name:G_FIXED,items:[]});
+  month.groups.push({id:nid(),name:G_FLEX,items:catItems});
+  month.groups.push({id:nid(),name:G_OTHER,items:[]});
   S.months[mk]=month;
   // bills live in the first-class Bills list only (not duplicated as budget envelopes)
   S.bills=cleanBills.map(b=>({id:nid(),name:b.name.trim(),amount:parseFloat(b.amount)||0,dueDay:Math.min(31,Math.max(1,parseInt(b.day)||1)),category:"",recurring:true,notes:"",paid:{}}));
@@ -687,27 +722,26 @@ function budgetHTML(m,t){
     +compactSection("1","INCOME","var(--teal)",m.income,"income",'<span style="color:var(--teal)">'+fmt(t.income)+'</span>')
     +compactSection("2","SAVINGS","var(--purple)",m.savings,"savings",'<span style="color:'+(t.rate>=15?"var(--teal)":"var(--orange)")+'">'+t.rate.toFixed(0)+'% rate</span>')
     +'</div>';
-  // spend groups in tight spreadsheet-style grid
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px"><div class="label" style="color:var(--orange)">3 · Spend</div>'
-    +(m.groups.length>1?'<button data-reorder="1" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:9px;padding:5px 10px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px">'+I.drag+' Reorder</button>':'')
-    +'</div>';
+  // spend buckets: Fixed Bills, Monthly Expenses, Other (Other only shown when it has lines)
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px"><div class="label" style="color:var(--orange)">3 · Spend</div></div>';
   h+='<div class="sheet-grid">';
   m.groups.forEach(g=>{
+    if(g.name===G_OTHER && !g.items.length) return; // Other is a fallback only
     const gp=g.items.reduce((s,i)=>s+(i.planned||0),0);
     const ga=g.items.reduce((s,i)=>s+(i.actual||0),0);
+    const isFixed=g.name===G_FIXED;
     const rows=g.items.map(i=>{
       const over=i.actual>i.planned&&i.actual>0;
       return '<div class="grow" data-edit="item:'+g.id+':'+i.id+'">'
         +'<div class="gn">'+esc(i.name)+(i.recurring?' <span style="color:var(--dim);opacity:.6;vertical-align:middle">'+I.repeat+'</span>':'')
+        +(i.dueDay>0?'<div class="gspent" style="color:var(--dim)">due '+ordinal(i.dueDay)+'</div>':'')
         +(i.actual>0?'<div class="gspent" style="color:'+(over?"var(--red)":"var(--dim)")+'">'+fmtC(i.actual)+' spent'+(over?' · over':'')+'</div>':'')
         +'</div>'
         +'<div class="gv">'+fmt(i.planned||0)+'</div></div>';
-    }).join("");
+    }).join("")||'<div class="grow" style="cursor:default;color:var(--dim);font-size:12px">'+(isFixed?'No fixed bills yet':'Nothing here yet')+'</div>';
     h+='<div class="gcard"><div class="ghead">'
-      +'<div class="gname">'+esc(g.name)+'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-      +'<span class="gtot">'+(ga>0?'<span style="color:'+(ga>gp?"var(--red)":"var(--teal)")+'">'+fmt(ga)+'</span>/':'')+fmt(gp)+'</span>'
-      +'<button data-gdel="'+g.id+'" style="background:none;border:none;color:var(--dim);opacity:.5;padding:0;display:flex">'+I.trash+'</button></div></div>'
+      +'<div class="gname" style="display:inline-flex;align-items:center;gap:6px">'+(isFixed?'<span style="color:var(--dim);opacity:.7;display:inline-flex">'+I.repeat+'</span>':'')+esc(g.name)+'</div>'
+      +'<span class="gtot">'+(ga>0?'<span style="color:'+(ga>gp?"var(--red)":"var(--teal)")+'">'+fmt(ga)+'</span>/':'')+fmt(gp)+'</span></div>'
       +rows
       +'<button class="gadd" data-add="item:'+g.id+'">'+I.plus+' Add line</button></div>';
   });
@@ -740,7 +774,6 @@ function trackHTML(m,t){
   }
   let dueRec=0;m.groups.forEach(g=>g.items.forEach(i=>{if(i.recurring&&((i.planned||0)-(i.actual||0))>0.5)dueRec++;}));
   if(dueRec)h+='<button id="payAllRec" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:-4px auto 16px;color:var(--teal);border-color:var(--tealb)">'+I.check+' Mark '+dueRec+' recurring bill'+(dueRec>1?'s':'')+' paid</button>';
-  if(m.groups.filter(g=>g.items.length).length>1)h+='<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button data-reorder="1" style="background:var(--inset);border:1px solid var(--line);color:var(--dim);border-radius:9px;padding:5px 10px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px">'+I.drag+' Reorder</button></div>';
   h+='<div class="sheet-grid">';
   m.groups.forEach(g=>{
     if(!g.items.length)return;
@@ -1013,15 +1046,15 @@ function openEditEntry(kind,gid,iid){
     fieldHTML("e_name","Name",item.name)
     +(isSpend
       ?fieldHTML("e_planned","Planned ($)",item.planned,"number","0","Log spending from the Spend tab")
-       +'<button id="e_rec" type="button" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:10px;color:var(--text);font-size:14px"><span style="display:flex;align-items:center;gap:8px">'+I.repeat+' Recurring monthly bill</span><span id="e_recState" style="font-weight:800;color:'+(item.recurring?'var(--teal)':'var(--dim)')+'">'+(item.recurring?'ON':'OFF')+'</span></button>'
+       +catSegHTML(itemBucket(item))
+       +'<div id="e_dueWrap" style="display:'+(itemBucket(item)===G_FIXED?"block":"none")+'">'+fieldHTML("e_due","Due day of month (optional)",item.dueDay||"","number","1")+'</div>'
        +'<button id="e_roll" type="button" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:4px;color:var(--text);font-size:14px"><span style="display:flex;align-items:center;gap:8px">'+I.up+' Roll over unused money</span><span id="e_rollState" style="font-weight:800;color:'+(item.rollover?'var(--teal)':'var(--dim)')+'">'+(item.rollover?'ON':'OFF')+'</span></button>'
        +'<div style="font-size:11px;color:var(--dim);margin-bottom:13px;line-height:1.5">On: leftover carries into next month (good for car maintenance, Christmas, clothes). Off: resets each month (groceries, gas, fun).</div>'
       :fieldHTML("e_amount","Amount ($)",item.amount,"number"))
     +'<button id="eSave" class="btn btn-teal" style="margin-bottom:10px">Save</button>'
     +'<button id="eDel" class="btn" style="background:var(--redsoft);border:1px solid rgba(248,113,113,.3);color:var(--red);font-size:13.5px">Delete line</button>');
-  let recOn=!!item.recurring;
-  const recBtn=document.getElementById("e_rec");
-  if(recBtn)recBtn.onclick=()=>{recOn=!recOn;const s=document.getElementById("e_recState");s.textContent=recOn?'ON':'OFF';s.style.color=recOn?'var(--teal)':'var(--dim)';};
+  let cat=itemBucket(item);
+  if(isSpend)wireCatSeg(()=>cat,v=>{cat=v;},"e_dueWrap");
   let rollOn=!!item.rollover;
   const rollBtn=document.getElementById("e_roll");
   if(rollBtn)rollBtn.onclick=()=>{rollOn=!rollOn;const s=document.getElementById("e_rollState");s.textContent=rollOn?'ON':'OFF';s.style.color=rollOn?'var(--teal)':'var(--dim)';};
@@ -1029,7 +1062,9 @@ function openEditEntry(kind,gid,iid){
     item.name=document.getElementById("e_name").value||item.name;
     if(isSpend){
       item.planned=parseFloat(document.getElementById("e_planned").value)||0;
-      item.recurring=recOn;
+      item.recurring=cat===G_FIXED;
+      item.bucket=cat===G_OTHER?G_OTHER:undefined;
+      item.dueDay=cat===G_FIXED?(parseInt(document.getElementById("e_due").value)||undefined):undefined;
       item.rollover=rollOn;
     }else{
       item.amount=parseFloat(document.getElementById("e_amount").value)||0;
@@ -1044,23 +1079,41 @@ function openEditEntry(kind,gid,iid){
   };
 }
 
+function catSegHTML(current){
+  const opts=[[G_FIXED,"Fixed Bills","Repeats monthly",I.repeat],[G_FLEX,"Monthly Expenses","Flexible, changes each month",""],[G_OTHER,"Other","Everything else",""]];
+  return '<div class="label" style="margin-bottom:8px">Category</div><div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">'
+    +opts.map(o=>'<button type="button" data-catpick="'+o[0]+'" class="catopt'+(current===o[0]?" on":"")+'">'
+      +'<span style="display:flex;align-items:center;gap:7px;font-weight:700">'+(o[3]||'')+o[1]+'</span>'
+      +'<span style="font-size:11px;color:var(--dim);font-weight:500;margin-top:2px;display:block">'+o[2]+'</span></button>').join("")
+    +'</div>';
+}
+function wireCatSeg(getCat,setCat,dueWrapId){
+  document.querySelectorAll("[data-catpick]").forEach(b=>b.onclick=()=>{
+    setCat(b.dataset.catpick);
+    document.querySelectorAll("[data-catpick]").forEach(x=>x.classList.toggle("on",x.dataset.catpick===getCat()));
+    const dw=document.getElementById(dueWrapId);if(dw)dw.style.display=getCat()===G_FIXED?"block":"none";
+  });
+}
 function openAddEntry(kind,gid){
   const m=M();if(!m)return;
   const isSpend=kind==="item";
+  let cat=G_FLEX;
+  if(isSpend){const g=m.groups.find(x=>x.id===gid);if(g&&(g.name===G_FIXED||g.name===G_OTHER))cat=g.name;}
   sheet("Add line",
     fieldHTML("a_name","Name","","text",isSpend?"e.g. Car wash":"e.g. Side income")
     +fieldHTML("a_amount",isSpend?"Planned ($)":"Amount ($)","","number","0")
-    +(isSpend?'<button id="a_rec" type="button" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:13px;color:var(--text);font-size:14px"><span style="display:flex;align-items:center;gap:8px">'+I.repeat+' Recurring monthly bill</span><span id="a_recState" style="font-weight:800;color:var(--dim)">OFF</span></button>':'')
+    +(isSpend?catSegHTML(cat)+'<div id="a_dueWrap" style="display:'+(cat===G_FIXED?"block":"none")+'">'+fieldHTML("a_due","Due day of month (optional)","","number","1")+'</div>':'')
     +'<button id="aGo" class="btn btn-teal">Add</button>');
-  let recOn=false;
-  const recBtn=document.getElementById("a_rec");
-  if(recBtn)recBtn.onclick=()=>{recOn=!recOn;const s=document.getElementById("a_recState");s.textContent=recOn?'ON':'OFF';s.style.color=recOn?'var(--teal)':'var(--dim)';};
+  if(isSpend)wireCatSeg(()=>cat,v=>{cat=v;},"a_dueWrap");
   document.getElementById("aGo").onclick=()=>{
     const name=document.getElementById("a_name").value;if(!name)return;
     const amt=parseFloat(document.getElementById("a_amount").value)||0;
     if(kind==="income")m.income.push({id:nid(),name,amount:amt});
     else if(kind==="savings")m.savings.push({id:nid(),name,amount:amt});
-    else{const g=m.groups.find(x=>x.id===gid);if(g)g.items.push({id:nid(),name,planned:amt,actual:0,txns:[],recurring:recOn});}
+    else{
+      const due=cat===G_FIXED?(parseInt(document.getElementById("a_due").value)||0):0;
+      placeItem(m,{id:nid(),name,planned:amt,actual:0,txns:[],recurring:cat===G_FIXED,bucket:cat===G_OTHER?G_OTHER:undefined,dueDay:due||undefined});
+    }
     closeModal();commit();
   };
 }
@@ -1080,11 +1133,10 @@ function openAddGroup(){
     +'<div style="display:flex;gap:8px"><input id="g_name" placeholder="Add your own" class="ob-in" style="flex:1;min-width:0"><button id="g_addCustom" class="btn btn-teal" style="width:auto;flex:0 0 auto;padding:11px 20px">Add</button></div>'
     +'<div id="g_added"></div>'
     +'<button id="ddDone" class="btn btn-ghost" style="margin-top:18px;color:var(--text)">Done</button>');
-  const target=()=>{let g=m.groups.find(x=>x.name==="Spending");if(!g)g=m.groups[0];if(!g){g={id:nid(),name:"Spending",items:[]};m.groups.push(g);}return g;};
   const added=[];
   const refreshAdded=()=>{const el=document.getElementById("g_added");if(el)el.innerHTML=added.length?('<div style="margin-top:16px;font-size:12.5px;color:var(--teal);line-height:1.6;display:flex;align-items:flex-start;gap:6px"><span style="display:flex;margin-top:1px">'+I.check+'</span><span>Added: '+added.map(esc).join(", ")+'</span></div>'):'';};
   const rebuildMenu=()=>{const mn=document.getElementById("ddMenu");if(mn){mn.innerHTML=menuRows(recompute());wireRows();}};
-  const addCat=name=>{name=(name||"").trim();if(!name)return false;target().items.push({id:nid(),name,planned:0,actual:0,txns:[],recurring:false});added.push(name);commit();refreshAdded();toast("Added "+esc(name),"var(--teal)");return true;};
+  const addCat=name=>{name=(name||"").trim();if(!name)return false;placeItem(m,{id:nid(),name,planned:0,actual:0,txns:[],recurring:looksFixed(name)});added.push(name);commit();refreshAdded();toast("Added "+esc(name)+(looksFixed(name)?" to Fixed Bills":""),"var(--teal)");return true;};
   const field=document.getElementById("ddField"), menu=document.getElementById("ddMenu"), chev=document.getElementById("ddChev");
   let open=false;
   field.onclick=()=>{open=!open;menu.style.display=open?"block":"none";chev.style.transform=open?"rotate(180deg)":"";};
