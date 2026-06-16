@@ -264,6 +264,45 @@ select option{color:#111}
 .swatch{height:28px;border-radius:12px;margin-bottom:10px;background:linear-gradient(135deg,var(--accent),var(--accent2))}
 .appearanceChoice b{display:block;font-size:13px}.appearanceChoice span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
 
+
+/* Compatibility for existing modal markup used by the stable app logic */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.44);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  z-index:60;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+}
+.sheetTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.sheetTop h2{
+  font-size:20px;
+  font-weight:850;
+  letter-spacing:-.045em;
+}
+.x{
+  width:38px;
+  height:38px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background:var(--input);
+  color:var(--muted);
+  font-size:24px;
+  line-height:1;
+  border:1px solid var(--line);
+}
+.x:active{background:var(--panel2)}
+
 @media(max-width:760px){
   .heroGrid{grid-template-columns:1fr}.signal{width:100%;aspect-ratio:auto;border-radius:26px;padding:1px;background:var(--panel2)}.signalInner{min-height:98px;border-radius:25px}
   .grid.two,.grid.three,.grid.four{grid-template-columns:1fr}.heroNum{font-size:62px}.promise{grid-template-columns:1fr}.formRow{grid-template-columns:1fr}
@@ -342,7 +381,7 @@ function convertLegacy(old){
 function applyTheme(){document.documentElement.setAttribute("data-theme",state.theme||"light");document.documentElement.setAttribute("data-appearance",state.appearance||"graphite");document.body.classList.toggle("light",state.theme==="light");const m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",state.theme==="light"?"#F5F5F7":"#000000")}
 function toast(msg){const old=$(".toast");if(old)old.remove();const d=document.createElement("div");d.className="toast";d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
 function closeSheet(){document.getElementById("modalRoot").innerHTML=""}
-function sheet(title,body){document.getElementById("modalRoot").innerHTML=`<div class="modal" data-close="1"><div class="sheet" onclick="event.stopPropagation()"><div class="handle"></div><div class="sheetTop"><h2>${title}</h2><button class="x" data-action="close">×</button></div>${body}</div></div>`;$(".modal").onclick=e=>{if(e.target.dataset.close)closeSheet()};bindSheet()}
+function sheet(title,body){let mr=document.getElementById("modalRoot");if(!mr){mr=document.createElement("div");mr.id="modalRoot";document.body.appendChild(mr)}mr.innerHTML=`<div class="modal" data-close="1"><div class="sheet" onclick="event.stopPropagation()"><div class="handle"></div><div class="sheetTop"><h2>${title}</h2><button class="x" data-action="close">×</button></div>${body}</div></div>`;$(".modal").onclick=e=>{if(e.target.dataset.close)closeSheet()};bindSheet()}
 function field(id,label,value,type="text",placeholder=""){return `<label class="field"><span>${label}</span><input id="${id}" type="${type}" ${type==="number"?'inputmode="decimal"':''} value="${esc(value??"")}" placeholder="${esc(placeholder)}"></label>`}
 function selectField(id,label,value,opts){return `<label class="field"><span>${label}</span><select id="${id}">${opts.map(o=>`<option value="${esc(o[0])}" ${String(value)===String(o[0])?"selected":""}>${esc(o[1])}</option>`).join("")}</select></label>`}
 function iconFor(type){return {bill:"▣",flex:"◌",saving:"◎",other:"◇"}[type]||"◌"}
@@ -359,7 +398,7 @@ function render(){
 function hasMeaningfulData(){const keys=Object.keys(state.months||{});if(!keys.length)return false;return keys.some(k=>{const x=state.months[k];return (x.income||[]).some(i=>num(i.amount)>0)||(x.categories||[]).length||(x.transactions||[]).length})}
 function topbar(){return `<header class="topbar"><div class="toprow"><div class="brand"><div class="mark">${appEmblem(36)}</div><div><h1>Allotted</h1><p>Bills protected. Spending clear.</p></div></div><div class="monthPill"><button data-action="prevMonth">‹</button><strong>${monthName(state.selectedMonth)}</strong><button data-action="nextMonth">›</button></div></div></header>`}
 function navHTML(){const tabs=[["today","Today"],["plan","Plan"],["spend","Spend"],["bills","Bills"],["more","More"]];return `<nav class="nav"><div class="navInner">${tabs.map(t=>`<button data-tab="${t[0]}" class="${state.tab===t[0]?"on":""}"><b class="navIcon">${navGlyph(t[0])}</b><span>${t[1]}</span></button>`).join("")}</div></nav>`}
-function renderWelcome(){const root=$("#root");root.innerHTML=`<section class="welcome"><div class="welcomePanel"><div class="welcomeHero"><div class="emblemWrap"><svg class="heroLogo" viewBox="0 0 96 96" aria-label="Allotted emblem" role="img"><defs><linearGradient id="allottedBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#121720"/><stop offset="100%" stop-color="#070A0F"/></linearGradient><linearGradient id="allottedGloss" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="rgba(255,255,255,.14)"/><stop offset="45%" stop-color="rgba(255,255,255,.04)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/></linearGradient></defs><rect x="4" y="4" width="88" height="88" rx="22" fill="url(#allottedBg)" stroke="rgba(255,255,255,.10)"/><rect x="5" y="5" width="86" height="86" rx="21" fill="url(#allottedGloss)" opacity=".55"/><path d="M30 67 L44 24" stroke="#2DD4BF" stroke-width="6.5" stroke-linecap="round"/><path d="M65 67 L51 24" stroke="#F2A545" stroke-width="6.5" stroke-linecap="round"/><path d="M38.5 48 H56" stroke="#2DD4BF" stroke-width="6" stroke-linecap="round"/></svg></div><h1>Know what’s safe.</h1><p>A calmer way to budget. Protect bill money first, then see the amount you can spend today without guessing.</p><div class="promise"><div class="card"><strong>Bills protected</strong><span>Rent, car, utilities, and fixed bills stay separate.</span></div><div class="card"><strong>Daily clarity</strong><span>One safe-to-spend number without spreadsheet noise.</span></div><div class="card"><strong>Private by default</strong><span>No account, no ads, no bank connection required.</span></div></div><div class="grid two"><button class="btn primary full" data-action="onboard">Build my budget</button><button class="btn full" data-action="demo">Try demo budget</button></div><button class="btn flat full" data-action="importBackup" style="margin-top:10px">Restore from backup</button><div class="watermark">Private by default • Data stays on this device unless you export it</div></div></div></section>`;bind()}
+function renderWelcome(){const root=$("#root");root.innerHTML=`<section class="welcome"><div class="welcomePanel"><div class="welcomeHero"><div class="emblemWrap"><svg class="heroLogo" viewBox="0 0 96 96" aria-label="Allotted emblem" role="img"><defs><linearGradient id="allottedBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#121720"/><stop offset="100%" stop-color="#070A0F"/></linearGradient><linearGradient id="allottedGloss" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="rgba(255,255,255,.14)"/><stop offset="45%" stop-color="rgba(255,255,255,.04)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/></linearGradient></defs><rect x="4" y="4" width="88" height="88" rx="22" fill="url(#allottedBg)" stroke="rgba(255,255,255,.10)"/><rect x="5" y="5" width="86" height="86" rx="21" fill="url(#allottedGloss)" opacity=".55"/><path d="M30 67 L44 24" stroke="#2DD4BF" stroke-width="6.5" stroke-linecap="round"/><path d="M65 67 L51 24" stroke="#F2A545" stroke-width="6.5" stroke-linecap="round"/><path d="M38.5 48 H56" stroke="#2DD4BF" stroke-width="6" stroke-linecap="round"/></svg></div><h1>Know what’s safe.</h1><p>A calmer way to budget. Protect bill money first, then see the amount you can spend today without guessing.</p><div class="promise"><div class="card"><strong>Bills protected</strong><span>Rent, car, utilities, and fixed bills stay separate.</span></div><div class="card"><strong>Daily clarity</strong><span>One safe-to-spend number without spreadsheet noise.</span></div><div class="card"><strong>Private by default</strong><span>No account, no ads, no bank connection required.</span></div></div><div class="grid two"><button type="button" class="btn primary full" data-action="onboard">Build my budget</button><button type="button" class="btn full" data-action="demo">Try demo budget</button></div><button type="button" class="btn flat full" data-action="importBackup" style="margin-top:10px">Restore from backup</button><div class="watermark">Private by default • Data stays on this device unless you export it</div></div></div></section>`;bind()}
 function todayHTML(){const c=calc(), sw=scoreWord(c.score), pct=c.score*3.6+"deg";return `<section class="hero" style="--sigColor:${sw[1]};--sigPct:${pct}"><div class="heroGrid"><div><div class="heroSmall">Safe to spend today</div><div class="heroNum">${fmt(c.safe)}<small>/day</small></div><div class="heroCopy">Bill money, savings, and unassigned cash are not included. This is your spend pool divided across the days left in ${monthName(state.selectedMonth).split(" ")[0]}.</div><div class="heroActions"><button class="btn primary" data-action="logSpend">Log spending</button><button class="btn" data-action="buyCheck">Can I buy this?</button><button class="btn" data-tab="bills">Bills</button></div></div><div class="signal"><div class="signalInner"><div class="signalScore">${c.score}</div><div class="signalLabel">Budget Pulse</div><div class="signalWord">${sw[0]}</div></div></div></div></section>${briefHTML(c)}${lanesHTML(c)}${paycheckRunwayHTML(c)}${upcomingBillsHTML(c)}${detailsHTML(c)}`}
 function briefHTML(c){const items=briefItems(c).slice(0,3);return `<div class="card"><div class="cardHeader"><div><div class="title">Today’s brief</div><div class="sub">The few things that matter right now.</div></div><span class="chip teal">Daily loop</span></div><div class="briefList">${items.map(i=>`<div class="brief"><span class="dot" style="--dot:${i.color}"></span><div><div style="font-weight:850">${i.title}</div><div class="sub">${i.text}</div></div></div>`).join("")}</div></div>`}
 function briefItems(c){let arr=[];if(c.left<0)arr.push({color:"var(--red)",title:"Overassigned",text:`Your plan is ${fmt(Math.abs(c.left))} over income. Move or reduce money before trusting the safe number.`});else if(c.left>0)arr.push({color:"var(--orange)",title:"Money needs a job",text:`You still have ${fmt(c.left)} unassigned. Assign it to bills, savings, or spend pool.`});else arr.push({color:"var(--green)",title:"Every dollar has a job",text:"Your income is fully assigned for the month."});
@@ -450,6 +489,23 @@ function loadDemo(){state=defaultState();state.settings.onboardingDone=true;stat
 function nextFridayish(){const d=new Date();d.setDate(d.getDate()+5);return d.toISOString().slice(0,10)}
 function openOnboard(){sheet("Build your first budget",`<p class="sub" style="margin-bottom:14px">Start simple. Pick a template after this if you want.</p>${field("obIncome","Monthly take-home income","","number","3200")}${field("obPay","Next payday optional","","date","")}<button class="btn primary full" data-action="finishOnboard">Create budget</button><button class="btn full" style="margin-top:10px" data-action="demo">Use demo instead</button>`)}
 function finishOnboard(){state.settings.onboardingDone=true;const mon=m();mon.income=[{id:uid(),name:"Take-home pay",amount:num($("#obIncome").value)}];state.settings.nextPayday=$("#obPay").value;closeSheet();openTemplates();render()}
+
+// Fallback click delegation so welcome/sheet buttons cannot silently fail if binding misses.
+document.addEventListener("click",function(e){
+  const actionEl=e.target.closest("[data-action]");
+  if(actionEl && !actionEl.onclick){
+    e.preventDefault();
+    handle(actionEl.dataset.action,actionEl.dataset);
+    return;
+  }
+  const tabEl=e.target.closest("[data-tab]");
+  if(tabEl && !tabEl.onclick){
+    e.preventDefault();
+    state.tab=tabEl.dataset.tab;
+    render();
+  }
+});
+
 load();render();
 })();
 </script>
