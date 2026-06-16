@@ -451,6 +451,194 @@ input[type=number]{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .safePass{min-height:238px}
 }
 
+
+/* =========================================================
+   PLAN + BILL PAY UX FIX
+   ========================================================= */
+.rowActions{
+  display:flex;
+  gap:6px;
+  justify-content:flex-end;
+  align-items:center;
+  margin-top:7px;
+  flex-wrap:wrap;
+}
+.pillBtn{
+  min-height:28px;
+  border-radius:999px;
+  padding:6px 9px;
+  font-size:11px;
+  font-weight:850;
+  background:var(--input);
+  color:var(--soft);
+  border:1px solid var(--line);
+}
+.pillBtn.primary{
+  background:rgba(0,122,255,.13);
+  color:var(--blue);
+  border-color:rgba(0,122,255,.22);
+}
+.pillBtn.danger{
+  background:rgba(255,69,58,.12);
+  color:var(--red);
+  border-color:rgba(255,69,58,.20);
+}
+.billProgress{
+  margin-top:8px;
+}
+.billProgressTop{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:11.5px;
+  color:var(--muted);
+  font-weight:760;
+  margin-bottom:5px;
+}
+.billPayCard{
+  border-radius:22px;
+  padding:14px;
+  background:var(--input);
+  margin-bottom:12px;
+}
+.billPayCard b{
+  display:block;
+  font-size:17px;
+  font-weight:880;
+  letter-spacing:-.04em;
+}
+.billPayCard span{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:12.5px;
+  line-height:1.35;
+}
+.explainCard{
+  border-radius:22px;
+  padding:14px;
+  background:linear-gradient(160deg,rgba(0,122,255,.12),rgba(45,212,191,.08));
+  border:1px solid rgba(0,122,255,.16);
+  margin-bottom:12px;
+}
+.explainCard b{display:block;font-size:15px;font-weight:880}
+.explainCard span{display:block;color:var(--soft);font-size:12.5px;line-height:1.38;margin-top:4px}
+
+
+/* =========================================================
+   RELIABLE PLAN CONTROLS v2
+   Clear edit/delete/pay controls + mobile-safe click targets
+   ========================================================= */
+.row{
+  position:relative;
+}
+.rowManage{
+  display:flex;
+  gap:7px;
+  justify-content:flex-end;
+  align-items:center;
+  margin-top:8px;
+  flex-wrap:wrap;
+}
+.actionBtn{
+  min-height:32px;
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:11.5px;
+  font-weight:880;
+  background:var(--input);
+  color:var(--soft);
+  border:1px solid var(--line);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+.actionBtn.pay{
+  background:rgba(0,122,255,.14);
+  color:var(--blue);
+  border-color:rgba(0,122,255,.24);
+}
+.actionBtn.edit{
+  background:rgba(0,166,147,.13);
+  color:var(--teal);
+  border-color:rgba(0,166,147,.22);
+}
+.actionBtn.delete{
+  background:rgba(255,69,58,.13);
+  color:var(--red);
+  border-color:rgba(255,69,58,.22);
+}
+.actionBtn.clear{
+  background:rgba(255,159,10,.13);
+  color:var(--orange);
+  border-color:rgba(255,159,10,.22);
+}
+button,[data-act],[data-tab],[data-view],[data-template]{
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  -webkit-user-select:none;
+  user-select:none;
+}
+.billProgress{
+  margin-top:8px;
+}
+.billProgressTop{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:11.5px;
+  color:var(--muted);
+  font-weight:760;
+  margin-bottom:5px;
+}
+.planHint{
+  border-radius:24px;
+  padding:14px;
+  margin-bottom:12px;
+  background:linear-gradient(160deg,rgba(0,122,255,.12),rgba(45,212,191,.08));
+  border:1px solid rgba(0,122,255,.16);
+}
+.planHint b{display:block;font-size:15px;font-weight:880}
+.planHint span{display:block;margin-top:4px;color:var(--soft);font-size:12.5px;line-height:1.38}
+.billPayCard{
+  border-radius:22px;
+  padding:14px;
+  background:var(--input);
+  margin-bottom:12px;
+}
+.billPayCard b{
+  display:block;
+  font-size:17px;
+  font-weight:880;
+  letter-spacing:-.04em;
+}
+.billPayCard span{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:12.5px;
+  line-height:1.35;
+}
+.quickPayGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+@media(max-width:560px){
+  .row{
+    grid-template-columns:42px minmax(0,1fr);
+  }
+  .row > div:last-child{
+    grid-column:2;
+    text-align:left!important;
+  }
+  .rowManage{
+    justify-content:flex-start;
+  }
+  .quickPayGrid{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body>
@@ -507,8 +695,19 @@ function flexCats(){return state.cats.filter(c=>c.type==="spend")}
 function saveCats(){return state.cats.filter(c=>c.type==="save")}
 function spentCat(id){return monthTxns().filter(t=>t.type==="spend"&&t.cat===id).reduce((s,t)=>s+num(t.amount),0)}
 function billDate(b,k=state.month){const[y,m]=k.split("-").map(Number);const d=Math.min(num(b.dueDay)||1,new Date(y,m,0).getDate());return `${k}-${String(d).padStart(2,"0")}`}
-function billPaid(b){return !!(b.paid&&b.paid[state.month])}
-function calc(){const income=state.income.reduce((s,i)=>s+num(i.amount),0), bills=state.bills.reduce((s,b)=>s+num(b.amount),0), savings=saveCats().reduce((s,c)=>s+num(c.amount),0), spendPlan=flexCats().reduce((s,c)=>s+num(c.amount),0), spendSpent=monthTxns().filter(t=>t.type==="spend").reduce((s,t)=>s+num(t.amount),0), spendLeft=spendPlan-spendSpent, unassigned=income-bills-savings-spendPlan, billsLeft=state.bills.filter(b=>!billPaid(b)).reduce((s,b)=>s+num(b.amount),0), safe=Math.max(0,spendLeft/dayLeft(state.month));return{income,bills,savings,spendPlan,spendSpent,spendLeft,unassigned,billsLeft,safe,days:dayLeft(state.month)}}
+function billPaid(b){return isBillPaid(b,state.month)}
+function calc(){const income=state.income.reduce((s,i)=>s+num(i.amount),0), bills=state.bills.reduce((s,b)=>s+num(b.amount),0), savings=saveCats().reduce((s,c)=>s+num(c.amount),0), spendPlan=flexCats().reduce((s,c)=>s+num(c.amount),0), spendSpent=monthTxns().filter(t=>t.type==="spend").reduce((s,t)=>s+num(t.amount),0), spendLeft=spendPlan-spendSpent, unassigned=income-bills-savings-spendPlan, billsLeft=state.bills.reduce((s,b)=>s+billRemaining(b),0), safe=Math.max(0,spendLeft/dayLeft(state.month));return{income,bills,savings,spendPlan,spendSpent,spendLeft,unassigned,billsLeft,safe,days:dayLeft(state.month)}}
+
+function billPaidAmount(b,k=state.month){
+  const txTotal=state.txns.filter(t=>t.type==="bill"&&t.bill===b.id&&String(t.date).slice(0,7)===k).reduce((s,t)=>s+num(t.amount),0);
+  const legacy=(b.paid&&b.paid[k])?num(b.amount):0;
+  return Math.min(num(b.amount),Math.max(txTotal,legacy));
+}
+function billRemaining(b,k=state.month){return Math.max(0,num(b.amount)-billPaidAmount(b,k))}
+function billProgressPct(b,k=state.month){return num(b.amount)?Math.min(100,billPaidAmount(b,k)/num(b.amount)*100):0}
+function isBillPaid(b,k=state.month){return billRemaining(b,k)<=0 && num(b.amount)>0}
+function deleteById(list,id){const i=list.findIndex(x=>x.id===id);if(i>=0)list.splice(i,1)}
+
 function billsInfo(){const base=state.month===monthNow()?today():state.month+"-01";return state.bills.map(b=>({...b,date:billDate(b),days:daysBetween(base,billDate(b)),paid:billPaid(b)})).sort((a,b)=>a.days-b.days)}
 function status(){const c=calc(), overdue=billsInfo().find(b=>!b.paid&&b.days<0), due=billsInfo().find(b=>!b.paid&&b.days<=3);if(c.unassigned<0)return{kind:"red",title:"Over budget",text:`You assigned ${money(Math.abs(c.unassigned))} more than income.`};if(overdue)return{kind:"red",title:"Bill overdue",text:`${overdue.name} is past due.`};if(due)return{kind:"orange",title:"Bill due soon",text:`${due.name} is ${due.days===0?"due today":"due in "+due.days+" days"}.`};if(c.unassigned>0)return{kind:"orange",title:"Money left to plan",text:`Assign ${money(c.unassigned)} to bills, spending, or savings.`};return{kind:"green",title:"On track",text:"Bills are protected and spending is planned."}}
 function pulse(){const c=calc();let score=90;if(c.unassigned<0)score-=35;if(c.spendLeft<0)score-=35;if(c.billsLeft>0)score-=8;score=Math.max(0,Math.min(99,score));return{score,deg:score*3.6,color:score>74?"var(--green)":score>49?"var(--orange)":"var(--red)"}}
@@ -569,7 +768,7 @@ function todayHTML(){const c=calc(), s=status(), p=pulse(), upcoming=billsInfo()
 </div>
 <div class="grid two">
   <div class="card tightCopy">
-    <div class="cardHeader"><div><div class="title">Upcoming bills</div><div class="sub">Money to keep protected.</div></div><button class="btn small" data-act="addBill">Add</button></div>
+    <div class="cardHeader"><div><div class="title">Upcoming bills</div><div class="sub">Pay in full or add partial payments.</div></div><button class="btn small" data-act="addBill">Add</button></div>
     <div class="list">${upcoming.length?upcoming.map(billRow).join(""):empty("No bills yet","Add bills to protect that money first.")}</div>
   </div>
   <div class="card tightCopy">
@@ -577,22 +776,50 @@ function todayHTML(){const c=calc(), s=status(), p=pulse(), upcoming=billsInfo()
     <div class="list">${recent.length?recent.map(txRow).join(""):empty("No spending yet","Log a purchase to update your number.")}</div>
   </div>
 </div>`}
-function planHTML(){const c=calc();return `<section class="heroCard"><div class="heroGrid"><div><div class="kicker">Monthly plan</div><div class="safeAmount">${money(c.unassigned)}<small> left</small></div><div class="heroText">${c.unassigned===0?"Every dollar has a job.":c.unassigned>0?"Assign what is left to bills, spending, or savings.":"You assigned more than your income."}</div><div class="actions"><button class="btn primary" data-act="addIncome">Add income</button><button class="btn" data-act="addBill">Add bill</button><button class="btn" data-act="addCat">Add category</button></div></div><div class="card" style="margin:0"><div class="row"><span class="icon">${icon("income")}</span><div><div class="rowTitle">Income</div><div class="rowSub">Money coming in</div></div><div class="money">${money(c.income)}</div></div><div class="row"><span class="icon">${icon("bill")}</span><div><div class="rowTitle">Bills</div><div class="rowSub">Protected money</div></div><div class="money">${money(c.bills)}</div></div><div class="row"><span class="icon">${icon("spend")}</span><div><div class="rowTitle">Spending</div><div class="rowSub">Flexible money</div></div><div class="money">${money(c.spendPlan)}</div></div><div class="row"><span class="icon">${icon("save")}</span><div><div class="rowTitle">Savings</div><div class="rowSub">Goals and buffers</div></div><div class="money">${money(c.savings)}</div></div></div></div></section><div class="grid two"><div class="card"><div class="cardHeader"><div><div class="title">Income</div><div class="sub">Take-home pay.</div></div><button class="btn small" data-act="addIncome">Add</button></div>${state.income.length?state.income.map(incomeRow).join(""):empty("No income","Add monthly take-home pay.")}</div><div class="card"><div class="cardHeader"><div><div class="title">Bills</div><div class="sub">Fixed expenses.</div></div><button class="btn small" data-act="addBill">Add</button></div>${state.bills.length?state.bills.map(billPlanRow).join(""):empty("No bills","Add rent, car, utilities, and subscriptions.")}</div></div><div class="grid two"><div class="card"><div class="cardHeader"><div><div class="title">Spending</div><div class="sub">Flexible categories.</div></div><button class="btn small" data-act="addCat" data-type="spend">Add</button></div>${flexCats().length?flexCats().map(catRow).join(""):empty("No spending categories","Add groceries, gas, food, and personal.")}</div><div class="card"><div class="cardHeader"><div><div class="title">Savings</div><div class="sub">Goals and buffers.</div></div><button class="btn small" data-act="addCat" data-type="save">Add</button></div>${saveCats().length?saveCats().map(catRow).join(""):empty("No savings goals","Add emergency fund or sinking funds.")}</div></div>`}
+function planHTML(){const c=calc();return `<section class="heroCard"><div class="heroGrid"><div><div class="kicker">Monthly plan</div><div class="safeAmount">${money(c.unassigned)}<small> left</small></div><div class="heroText">${c.unassigned===0?"Every dollar has a job.":c.unassigned>0?"Assign what is left to bills, spending, or savings.":"You assigned more than your income."}</div><div class="actions"><button class="btn primary" data-act="addIncome">Add income</button><button class="btn" data-act="addBill">Add bill</button><button class="btn" data-act="addCat">Add category</button></div></div><div class="card" style="margin:0"><div class="row"><span class="icon">${icon("income")}</span><div><div class="rowTitle">Income</div><div class="rowSub">Money coming in</div></div><div class="money">${money(c.income)}</div></div><div class="row"><span class="icon">${icon("bill")}</span><div><div class="rowTitle">Bills</div><div class="rowSub">Protected money</div></div><div class="money">${money(c.bills)}</div></div><div class="row"><span class="icon">${icon("spend")}</span><div><div class="rowTitle">Spending</div><div class="rowSub">Flexible money</div></div><div class="money">${money(c.spendPlan)}</div></div><div class="row"><span class="icon">${icon("save")}</span><div><div class="rowTitle">Savings</div><div class="rowSub">Goals and buffers</div></div><div class="money">${money(c.savings)}</div></div></div></div></section><div class="planHint"><b>Manage your plan</b><span>Use Edit/Delete to change your plan. Use Pay on bills to add a full or partial payment.</span></div><div class="grid two"><div class="card"><div class="cardHeader"><div><div class="title">Income</div><div class="sub">Take-home pay.</div></div><button class="btn small" data-act="addIncome">Add</button></div>${state.income.length?state.income.map(incomeRow).join(""):empty("No income","Add monthly take-home pay.")}</div><div class="card"><div class="cardHeader"><div><div class="title">Bills</div><div class="sub">Tap Pay to add a full or partial payment.</div></div><button class="btn small" data-act="addBill">Add</button></div>${state.bills.length?state.bills.map(billPlanRow).join(""):empty("No bills","Add rent, car, utilities, and subscriptions.")}</div></div><div class="grid two"><div class="card"><div class="cardHeader"><div><div class="title">Spending</div><div class="sub">Flexible categories.</div></div><button class="btn small" data-act="addCat" data-type="spend">Add</button></div>${flexCats().length?flexCats().map(catRow).join(""):empty("No spending categories","Add groceries, gas, food, and personal.")}</div><div class="card"><div class="cardHeader"><div><div class="title">Savings</div><div class="sub">Goals and buffers.</div></div><button class="btn small" data-act="addCat" data-type="save">Add</button></div>${saveCats().length?saveCats().map(catRow).join(""):empty("No savings goals","Add emergency fund or sinking funds.")}</div></div>`}
 function activityHTML(){const c=calc();let rows=monthTxns().slice().reverse();if(state.activityView==="spend")rows=rows.filter(t=>t.type==="spend");if(state.activityView==="bill")rows=rows.filter(t=>t.type==="bill");return `<section class="heroCard"><div class="heroGrid"><div><div class="kicker">Activity</div><div class="safeAmount">${money(c.spendLeft)}<small> left</small></div><div class="heroText">Your flexible spending left this month. Bills stay separate.</div><div class="actions"><button class="btn primary" data-act="log">Log spending</button><button class="btn" data-act="check">Can I buy this?</button></div></div></div></section><div class="segment"><button data-view="all" class="${state.activityView==="all"?"on":""}">All</button><button data-view="spend" class="${state.activityView==="spend"?"on":""}">Spending</button><button data-view="bill" class="${state.activityView==="bill"?"on":""}">Bills</button></div><div class="grid two"><div class="card"><div class="cardHeader"><div><div class="title">Transactions</div><div class="sub">This month.</div></div></div>${rows.length?rows.map(txRow).join(""):empty("No activity","Log spending or mark a bill paid.")}</div><div class="card"><div class="cardHeader"><div><div class="title">Categories</div><div class="sub">Progress by category.</div></div></div>${flexCats().length?flexCats().map(catRow).join(""):empty("No categories","Add spending categories in Plan.")}</div></div>`}
 function moreHTML(){return `<div class="card"><div class="cardHeader"><div><div class="title">More</div><div class="sub">Advanced tools stay here so the budget stays simple.</div></div></div></div><div class="moreGroupTitle">Planning</div><div class="moreGroup"><button class="moreRow" data-act="pay"><span class="icon">${icon("pay")}</span><div><b>Paycheck settings</b><span>Plan around your next payday.</span></div><span>›</span></button><button class="moreRow" data-act="debt"><span class="icon">${icon("debt")}</span><div><b>Debt payoff</b><span>Track balances and extra payoff.</span></div><span>›</span></button></div><div class="moreGroupTitle">Data</div><div class="moreGroup"><button class="moreRow" data-act="backup"><span class="icon">${icon("backup")}</span><div><b>Backup</b><span>Save a copy of your budget.</span></div><span>›</span></button><button class="moreRow" data-act="import"><span class="icon">${icon("restore")}</span><div><b>Restore</b><span>Import a backup file.</span></div><span>›</span></button><button class="moreRow" data-act="csv"><span class="icon">${icon("csv")}</span><div><b>Export CSV</b><span>Download spending history.</span></div><span>›</span></button></div><div class="moreGroupTitle">App</div><div class="moreGroup"><button class="moreRow" data-act="theme"><span class="icon">${icon("look")}</span><div><b>Appearance</b><span>Switch to ${state.theme==="dark"?"light":"dark"} mode.</span></div><span>›</span></button><button class="moreRow" data-act="privacy"><span class="icon">${icon("privacy")}</span><div><b>Privacy</b><span>No account. No bank login. Local data.</span></div><span>›</span></button><button class="moreRow" data-act="reset"><span class="icon">${icon("lock")}</span><div><b>Reset app</b><span>Erase local data on this device.</span></div><span>›</span></button></div>`}
 function empty(t,s){return `<div class="empty"><b>${esc(t)}</b><br>${esc(s)}</div>`}
-function incomeRow(i){return `<div class="row"><span class="icon">${icon("income")}</span><div><div class="rowTitle">${esc(i.name)}</div><div class="rowSub">Income</div></div><div class="money">${money(i.amount)}</div></div>`}
-function billRow(b){const label=b.paid?"Paid":b.days<0?`${Math.abs(b.days)} days late`:b.days===0?"Due today":`Due in ${b.days} days`;const cls=b.paid?"green":b.days<0?"red":b.days<=3?"orange":"blue";return `<div class="row"><span class="icon">${icon("bill")}</span><div><div class="rowTitle">${esc(b.name)}</div><div class="rowSub">${b.date} • <span class="tag ${cls}">${label}</span></div></div><div style="text-align:right"><div class="money">${money(b.amount)}</div><button class="tag ${b.paid?"":"blue"}" data-act="${b.paid?"unpayBill":"payBill"}" data-id="${b.id}" style="margin-top:7px">${b.paid?"Undo":"Paid"}</button></div></div>`}
-function billPlanRow(b){return `<div class="row"><span class="icon">${icon("bill")}</span><div><div class="rowTitle">${esc(b.name)}</div><div class="rowSub">Due day ${b.dueDay||1}</div></div><div class="money">${money(b.amount)}</div></div>`}
-function catRow(c){const spent=c.type==="spend"?spentCat(c.id):0,left=num(c.amount)-spent,pct=c.amount?Math.min(100,spent/num(c.amount)*100):0;return `<div class="row"><span class="icon">${icon(c.type==="save"?"save":"spend")}</span><div><div class="rowTitle">${esc(c.name)}</div><div class="rowSub">${c.type==="save"?"Goal":"Spent"} ${money(spent)} of ${money(c.amount)}</div><div class="bar"><i style="--w:${pct}%;--bar:${pct>90?"var(--red)":pct>70?"var(--orange)":"var(--blue)"}"></i></div></div><div class="money">${money(left)}</div></div>`}
+function incomeRow(i){return `<div class="row"><span class="icon">${icon("income")}</span><div><div class="rowTitle">${esc(i.name)}</div><div class="rowSub">Income</div></div><div style="text-align:right"><div class="money">${money(i.amount)}</div><div class="rowManage"><button type="button" class="actionBtn edit" data-act="editIncome" data-id="${i.id}">Edit</button><button type="button" class="actionBtn delete" data-act="deleteIncome" data-id="${i.id}">Delete</button></div></div></div>`}
+function billRow(b){const paidAmt=billPaidAmount(b), remain=billRemaining(b), pct=billProgressPct(b), label=isBillPaid(b)?"Paid":b.days<0?`${Math.abs(b.days)} days late`:b.days===0?"Due today":`Due in ${b.days} days`;const cls=isBillPaid(b)?"green":b.days<0?"red":b.days<=3?"orange":"blue";return `<div class="row"><span class="icon">${icon("bill")}</span><div><div class="rowTitle">${esc(b.name)}</div><div class="rowSub">${b.date} • <span class="tag ${cls}">${label}</span></div><div class="billProgress"><div class="billProgressTop"><span>${money(paidAmt)} paid</span><span>${money(remain)} left</span></div><div class="bar"><i style="--w:${pct}%;--bar:${isBillPaid(b)?"var(--green)":"var(--blue)"}"></i></div></div></div><div style="text-align:right"><div class="money">${money(b.amount)}</div><div class="rowManage"><button type="button" class="actionBtn pay" data-act="openBillPay" data-id="${b.id}">${isBillPaid(b)?"Paid":"Pay"}</button><button type="button" class="actionBtn edit" data-act="editBill" data-id="${b.id}">Edit</button></div></div></div>`}
+function billPlanRow(b){const paidAmt=billPaidAmount(b), remain=billRemaining(b), pct=billProgressPct(b);return `<div class="row"><span class="icon">${icon("bill")}</span><div><div class="rowTitle">${esc(b.name)}</div><div class="rowSub">Due day ${b.dueDay||1} • ${money(remain)} left</div><div class="billProgress"><div class="billProgressTop"><span>${money(paidAmt)} paid</span><span>${money(b.amount)} total</span></div><div class="bar"><i style="--w:${pct}%;--bar:${isBillPaid(b)?"var(--green)":"var(--blue)"}"></i></div></div></div><div style="text-align:right"><div class="money">${money(b.amount)}</div><div class="rowManage"><button type="button" class="actionBtn pay" data-act="openBillPay" data-id="${b.id}">Pay</button><button type="button" class="actionBtn edit" data-act="editBill" data-id="${b.id}">Edit</button><button type="button" class="actionBtn delete" data-act="deleteBill" data-id="${b.id}">Delete</button></div></div></div>`}
+function catRow(c){const spent=c.type==="spend"?spentCat(c.id):0,left=num(c.amount)-spent,pct=c.amount?Math.min(100,spent/num(c.amount)*100):0;return `<div class="row"><span class="icon">${icon(c.type==="save"?"save":"spend")}</span><div><div class="rowTitle">${esc(c.name)}</div><div class="rowSub">${c.type==="save"?"Goal":"Spent"} ${money(spent)} of ${money(c.amount)}</div><div class="bar"><i style="--w:${pct}%;--bar:${pct>90?"var(--red)":pct>70?"var(--orange)":"var(--blue)"}"></i></div></div><div style="text-align:right"><div class="money">${money(left)}</div><div class="rowManage"><button type="button" class="actionBtn edit" data-act="editCat" data-id="${c.id}">Edit</button><button type="button" class="actionBtn delete" data-act="deleteCat" data-id="${c.id}">Delete</button></div></div></div>`}
 function txRow(t){const c=state.cats.find(x=>x.id===t.cat), b=state.bills.find(x=>x.id===t.bill);return `<div class="row"><span class="icon">${icon(t.type==="bill"?"bill":"spend")}</span><div><div class="rowTitle">${esc(t.note||b?.name||c?.name||"Transaction")}</div><div class="rowSub">${t.date} • ${esc(c?.name||b?.name||t.type)}</div></div><div class="money">-${money(t.amount)}</div></div>`}
 function bind(){
-  $$("[data-act]").forEach(el=>el.onclick=()=>act(el.dataset.act,el.dataset));
-  $$("[data-tab]").forEach(el=>el.onclick=()=>{state.tab=el.dataset.tab;render()});
-  $$("[data-view]").forEach(el=>el.onclick=()=>{state.activityView=el.dataset.view;render()});
-  $$("[data-template]").forEach(el=>el.onclick=()=>{const input=$("#setupTemplate");if(input)input.value=el.dataset.template;$$("[data-template]").forEach(x=>x.classList.remove("on"));el.classList.add("on")});
+  const clicker=e=>{
+    const template=e.target.closest("[data-template]");
+    if(template){
+      const input=$("#setupTemplate");
+      if(input)input.value=template.dataset.template;
+      $$("[data-template]").forEach(x=>x.classList.remove("on"));
+      template.classList.add("on");
+      return;
+    }
+    const actEl=e.target.closest("[data-act]");
+    if(actEl){
+      e.preventDefault();
+      act(actEl.dataset.act,actEl.dataset);
+      return;
+    }
+    const tabEl=e.target.closest("[data-tab]");
+    if(tabEl){
+      e.preventDefault();
+      state.tab=tabEl.dataset.tab;
+      render();
+      return;
+    }
+    const viewEl=e.target.closest("[data-view]");
+    if(viewEl){
+      e.preventDefault();
+      state.activityView=viewEl.dataset.view;
+      render();
+      return;
+    }
+  };
+  const app=$("#app"); if(app)app.onclick=clicker;
+  const root=$("#sheetRoot"); if(root)root.onclick=e=>{if(e.target.classList&&e.target.classList.contains("sheetOverlay")){closeSheet();return}clicker(e)};
 }
-function sheet(title,body){$("#sheetRoot").innerHTML=`<div class="sheetOverlay" data-close="1"><div class="sheet" onclick="event.stopPropagation()"><div class="handle"></div><div class="sheetTop"><h2>${esc(title)}</h2><button class="close" data-act="close">×</button></div>${body}</div></div>`;$(".sheetOverlay").onclick=e=>{if(e.target.dataset.close)closeSheet()};bind()}
+function sheet(title,body){$("#sheetRoot").innerHTML=`<div class="sheetOverlay"><div class="sheet"><div class="handle"></div><div class="sheetTop"><h2>${esc(title)}</h2><button type="button" class="close" data-act="close">×</button></div>${body}</div></div>`;bind()}
 function closeSheet(){$("#sheetRoot").innerHTML=""}
 function field(id,label,val="",type="text",ph=""){return `<label class="field"><span>${label}</span><input id="${id}" type="${type}" value="${esc(val)}" placeholder="${esc(ph)}" ${type==="number"?'inputmode="decimal"':''}></label>`}
 function select(id,label,val,opts){return `<label class="field"><span>${label}</span><select id="${id}">${opts.map(o=>`<option value="${esc(o[0])}" ${String(val)===String(o[0])?"selected":""}>${esc(o[1])}</option>`).join("")}</select></label>`}
@@ -611,18 +838,48 @@ ${field("setupIncome","Monthly take-home income","","number","5600")}
 <button class="btn primary full" data-act="finishSetup">Create budget</button>`)}
 function applyTemplate(name){if(name==="blank")return;const addBill=(n,a,d)=>state.bills.push({id:uid(),name:n,amount:a,dueDay:d,paid:{}}), addCat=(n,a,type)=>state.cats.push({id:uid(),name:n,amount:a,type});if(name==="simple"){addBill("Rent / Mortgage",0,1);addBill("Utilities",0,10);addBill("Phone",0,15);addCat("Groceries",0,"spend");addCat("Gas",0,"spend");addCat("Eating Out",0,"spend");addCat("Personal",0,"spend");addCat("Emergency Fund",0,"save")}if(name==="family"){addBill("Rent / Mortgage",0,1);addBill("Car Payment",0,5);addBill("Insurance",0,12);addCat("Groceries",0,"spend");addCat("Baby / Kids",0,"spend");addCat("Household",0,"spend");addCat("Family",0,"spend");addCat("Savings",0,"save")}if(name==="paycheck"){addBill("Rent / Mortgage",0,1);addBill("Phone",0,15);addBill("Insurance",0,20);addCat("Food",0,"spend");addCat("Gas",0,"spend");addCat("Safe Spending",0,"spend");addCat("Buffer",0,"save")}if(name==="debt"){addBill("Minimum Payments",0,7);addBill("Rent / Mortgage",0,1);addCat("Groceries",0,"spend");addCat("Gas",0,"spend");addCat("Extra Debt Payment",0,"save");addCat("Emergency Fund",0,"save")}}
 function loadDemo(){state=blank();state.settings.setup=true;state.income=[{id:uid(),name:"Take-home pay",amount:5600}];state.settings.nextPayday=today().slice(0,8)+"20";state.settings.payAmount=2800;state.bills=[{id:uid(),name:"Rent",amount:2237,dueDay:1,paid:{}},{id:uid(),name:"Car payment",amount:650,dueDay:15,paid:{}},{id:uid(),name:"Insurance",amount:220,dueDay:18,paid:{}},{id:uid(),name:"Phone",amount:145,dueDay:24,paid:{}}];state.cats=[{id:uid(),name:"Groceries",amount:650,type:"spend"},{id:uid(),name:"Gas",amount:240,type:"spend"},{id:uid(),name:"Eating Out",amount:220,type:"spend"},{id:uid(),name:"Personal",amount:160,type:"spend"},{id:uid(),name:"Emergency Fund",amount:300,type:"save"}];const g=state.cats[0],gas=state.cats[1],eat=state.cats[2];state.txns=[{id:uid(),date:today(),type:"spend",cat:g.id,amount:87,note:"Groceries"},{id:uid(),date:today(),type:"spend",cat:gas.id,amount:42,note:"Gas"},{id:uid(),date:today(),type:"spend",cat:eat.id,amount:18,note:"Lunch"}];toast("Demo loaded");render()}
-function incomeSheet(){sheet("Add income",`${field("iName","Name","Take-home pay")}${field("iAmount","Monthly amount","","number","3200")}<button class="btn primary full" data-act="saveIncome">Save income</button>`)}
-function billSheet(){sheet("Add bill",`${field("bName","Bill name","","text","Rent")}${field("bAmount","Amount","","number","1200")}${field("bDay","Due day","","number","1")}<button class="btn primary full" data-act="saveBill">Save bill</button>`)}
-function catSheet(type="spend"){sheet("Add category",`${field("cName","Name","", "text", type==="save"?"Emergency Fund":"Groceries")}${field("cAmount","Monthly amount","","number","300")}${select("cType","Type",type,[["spend","Spending"],["save","Savings"]])}<button class="btn primary full" data-act="saveCat">Save category</button>`)}
+function incomeSheet(id){const i=state.income.find(x=>x.id===id);sheet(i?"Edit income":"Add income",`${field("iName","Name",i?.name||"Take-home pay")}${field("iAmount","Monthly amount",i?.amount||"","number","3200")}<button class="btn primary full" data-act="${i?"saveIncomeEdit":"saveIncome"}" ${i?`data-id="${i.id}"`:""}>${i?"Save changes":"Save income"}</button>`)}
+function billSheet(id){const b=state.bills.find(x=>x.id===id);sheet(b?"Edit bill":"Add bill",`${field("bName","Bill name",b?.name||"","text","Rent")}${field("bAmount","Amount",b?.amount||"","number","1200")}${field("bDay","Due day",b?.dueDay||"","number","1")}<button class="btn primary full" data-act="${b?"saveBillEdit":"saveBill"}" ${b?`data-id="${b.id}"`:""}>${b?"Save changes":"Save bill"}</button>`)}
+function catSheet(type="spend",id){const c=state.cats.find(x=>x.id===id);sheet(c?"Edit category":"Add category",`${field("cName","Name",c?.name||"", "text", (c?.type||type)==="save"?"Emergency Fund":"Groceries")}${field("cAmount","Monthly amount",c?.amount||"","number","300")}${select("cType","Type",c?.type||type,[["spend","Spending"],["save","Savings"]])}<button class="btn primary full" data-act="${c?"saveCatEdit":"saveCat"}" ${c?`data-id="${c.id}"`:""}>${c?"Save changes":"Save category"}</button>`)}
 function logSheet(){sheet("Log spending",`${field("tAmount","Amount","","number","45")}${select("tCat","Category",flexCats()[0]?.id||"",flexCats().map(c=>[c.id,c.name]))}${field("tNote","Note optional","","text","Publix")}<button class="btn primary full" data-act="saveSpend">Log spending</button>`)}
 function checkSheet(){sheet("Can I buy this?",`${field("xAmount","Purchase amount","","number","75")}${select("xCat","Category",flexCats()[0]?.id||"",flexCats().map(c=>[c.id,c.name]))}<button class="btn primary full" data-act="runCheck">Check</button><div id="checkResult" style="margin-top:12px"></div>`)}
+
+function billPaySheet(id){
+  const b=state.bills.find(x=>x.id===id);
+  if(!b)return;
+  const paid=billPaidAmount(b), remain=billRemaining(b), defaultAmt=remain>0?remain:num(b.amount);
+  sheet("Pay bill",`<div class="billPayCard"><b>${esc(b.name)}</b><span>${money(paid)} paid of ${money(b.amount)}. ${money(remain)} remaining for ${monthName(state.month)}.</span></div><div class="quickPayGrid"><button type="button" class="btn primary full" data-act="quickPayBill" data-id="${b.id}">Mark paid in full</button><button type="button" class="btn full" data-act="clearBillPay" data-id="${b.id}">Clear payments</button></div><div class="planHint"><b>Partial payment</b><span>Enter any amount below if you only want to put money toward this bill.</span></div>${field("billPayAmount","Payment amount",defaultAmt,"number","100")}${field("billPayDate","Payment date",today(),"date")}<button class="btn primary full" data-act="saveBillPay" data-id="${b.id}">Add payment</button>`);
+}
+
 function paySheet(){sheet("Paycheck settings",`${field("pDate","Next payday",state.settings.nextPayday,"date")}${field("pAmount","Paycheck amount",state.settings.payAmount,"number")}<button class="btn primary full" data-act="savePay">Save paycheck</button>`)}
 function privacySheet(){sheet("Privacy",`<div class="row"><span class="icon">${icon("privacy")}</span><div><div class="rowTitle">No bank login</div><div class="rowSub">Allotted is manual by design.</div></div></div><div class="row"><span class="icon">${icon("lock")}</span><div><div class="rowTitle">Local data</div><div class="rowSub">Your budget stays on this device unless exported.</div></div></div><div class="row"><span class="icon">${icon("restore")}</span><div><div class="rowTitle">You control backups</div><div class="rowSub">Export and restore when you want.</div></div></div>`)}
 function debtSheet(){sheet("Debt payoff",`${field("dName","Debt name","","text","Credit Card")}${field("dBalance","Balance","","number","1800")}${field("dMin","Minimum payment","","number","65")}<button class="btn primary full" data-act="saveDebt">Save debt</button>${state.debts.map(d=>`<div class="row"><span class="icon">${icon("spend")}</span><div><div class="rowTitle">${esc(d.name)}</div><div class="rowSub">Minimum ${money(d.min)}</div></div><div class="money">${money(d.balance)}</div></div>`).join("")}`)}
 function exportBackup(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));a.download="allotted-backup-"+today()+".json";a.click()}
 function exportCSV(){const rows=[["date","type","category","note","amount"]].concat(state.txns.map(t=>[t.date,t.type,state.cats.find(c=>c.id===t.cat)?.name||state.bills.find(b=>b.id===t.bill)?.name||"",t.note||"",t.amount]));const blob=new Blob([rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n")],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="allotted-transactions-"+today()+".csv";a.click()}
 function toast(msg){let t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1700)}
-function act(a,d={}){if(a==="close")return closeSheet();if(a==="setup")return setupSheet();if(a==="demo")return loadDemo();if(a==="prev"){state.month=shiftMonth(state.month,-1);return render()}if(a==="next"){state.month=shiftMonth(state.month,1);return render()}if(a==="finishSetup"){state=blank();state.settings.setup=true;state.income=[{id:uid(),name:"Take-home pay",amount:num($("#setupIncome").value)}];state.settings.nextPayday=$("#setupPayday").value;state.settings.payAmount=num($("#setupPay").value);applyTemplate($("#setupTemplate").value);closeSheet();toast("Budget created");return render()}if(a==="addIncome")return incomeSheet();if(a==="saveIncome"){state.income.push({id:uid(),name:$("#iName").value||"Income",amount:num($("#iAmount").value)});closeSheet();return render()}if(a==="addBill")return billSheet();if(a==="saveBill"){state.bills.push({id:uid(),name:$("#bName").value||"Bill",amount:num($("#bAmount").value),dueDay:num($("#bDay").value)||1,paid:{}});closeSheet();return render()}if(a==="addCat")return catSheet(d.type||"spend");if(a==="saveCat"){state.cats.push({id:uid(),name:$("#cName").value||"Category",amount:num($("#cAmount").value),type:$("#cType").value});closeSheet();return render()}if(a==="log")return logSheet();if(a==="saveSpend"){state.txns.push({id:uid(),date:today(),type:"spend",cat:$("#tCat").value,amount:num($("#tAmount").value),note:$("#tNote").value});closeSheet();return render()}if(a==="check")return checkSheet();if(a==="runCheck"){const amount=num($("#xAmount").value), c=state.cats.find(x=>x.id===$("#xCat").value), left=num(c?.amount)-spentCat(c?.id), ok=amount<=left&&amount<=calc().spendLeft;$("#checkResult").innerHTML=`<div class="card" style="margin:0"><div class="title">${ok?"Yes — safe to buy.":"Not safely."}</div><div class="sub">${ok?`Bill money stays protected. ${esc(c?.name)} would have ${money(left-amount)} left.`:`This would push ${esc(c?.name||"the category")} past its limit. Keep bill money protected.`}</div></div>`;return}if(a==="payBill"){const b=state.bills.find(x=>x.id===d.id);if(b){b.paid=b.paid||{};b.paid[state.month]=today();state.txns.push({id:uid(),date:today(),type:"bill",bill:b.id,amount:b.amount,note:b.name})}return render()}if(a==="unpayBill"){const b=state.bills.find(x=>x.id===d.id);if(b?.paid)delete b.paid[state.month];state.txns=state.txns.filter(t=>!(t.type==="bill"&&t.bill===d.id&&String(t.date).slice(0,7)===state.month));return render()}if(a==="pay")return paySheet();if(a==="savePay"){state.settings.nextPayday=$("#pDate").value;state.settings.payAmount=num($("#pAmount").value);closeSheet();return render()}if(a==="debt")return debtSheet();if(a==="saveDebt"){state.debts.push({id:uid(),name:$("#dName").value||"Debt",balance:num($("#dBalance").value),min:num($("#dMin").value)});closeSheet();return render()}if(a==="backup")return exportBackup();if(a==="csv")return exportCSV();if(a==="import"){$("#fileInput").click();return}if(a==="privacy")return privacySheet();if(a==="theme"){state.theme=state.theme==="dark"?"light":"dark";return render()}if(a==="reset"){if(confirm("Erase all Allotted data on this device?")){localStorage.removeItem(KEY);state=blank();render()}return}}
+function act(a,d={}){if(a==="close")return closeSheet();if(a==="setup")return setupSheet();if(a==="demo")return loadDemo();if(a==="prev"){state.month=shiftMonth(state.month,-1);return render()}if(a==="next"){state.month=shiftMonth(state.month,1);return render()}if(a==="finishSetup"){state=blank();state.settings.setup=true;state.income=[{id:uid(),name:"Take-home pay",amount:num($("#setupIncome").value)}];state.settings.nextPayday=$("#setupPayday").value;state.settings.payAmount=num($("#setupPay").value);applyTemplate($("#setupTemplate").value);closeSheet();toast("Budget created");return render()}if(a==="addIncome")return incomeSheet();
+if(a==="editIncome")return incomeSheet(d.id);
+if(a==="saveIncome"){state.income.push({id:uid(),name:$("#iName").value||"Income",amount:num($("#iAmount").value)});closeSheet();return render()}
+if(a==="saveIncomeEdit"){const i=state.income.find(x=>x.id===d.id);if(i){i.name=$("#iName").value||"Income";i.amount=num($("#iAmount").value)}closeSheet();return render()}
+if(a==="addBill")return billSheet();
+if(a==="editBill")return billSheet(d.id);
+if(a==="saveBill"){state.bills.push({id:uid(),name:$("#bName").value||"Bill",amount:num($("#bAmount").value),dueDay:num($("#bDay").value)||1,paid:{}});closeSheet();return render()}
+if(a==="saveBillEdit"){const b=state.bills.find(x=>x.id===d.id);if(b){b.name=$("#bName").value||"Bill";b.amount=num($("#bAmount").value);b.dueDay=num($("#bDay").value)||1}closeSheet();return render()}
+if(a==="addCat")return catSheet(d.type||"spend");
+if(a==="editCat")return catSheet("spend",d.id);
+if(a==="saveCat"){state.cats.push({id:uid(),name:$("#cName").value||"Category",amount:num($("#cAmount").value),type:$("#cType").value});closeSheet();return render()}
+if(a==="saveCatEdit"){const c=state.cats.find(x=>x.id===d.id);if(c){c.name=$("#cName").value||"Category";c.amount=num($("#cAmount").value);c.type=$("#cType").value}closeSheet();return render()}
+if(a==="log")return logSheet();if(a==="saveSpend"){state.txns.push({id:uid(),date:today(),type:"spend",cat:$("#tCat").value,amount:num($("#tAmount").value),note:$("#tNote").value});closeSheet();return render()}if(a==="check")return checkSheet();if(a==="runCheck"){const amount=num($("#xAmount").value), c=state.cats.find(x=>x.id===$("#xCat").value), left=num(c?.amount)-spentCat(c?.id), ok=amount<=left&&amount<=calc().spendLeft;$("#checkResult").innerHTML=`<div class="card" style="margin:0"><div class="title">${ok?"Yes — safe to buy.":"Not safely."}</div><div class="sub">${ok?`Bill money stays protected. ${esc(c?.name)} would have ${money(left-amount)} left.`:`This would push ${esc(c?.name||"the category")} past its limit. Keep bill money protected.`}</div></div>`;return}if(a==="openBillPay")return billPaySheet(d.id);
+if(a==="quickPayBill"){const b=state.bills.find(x=>x.id===d.id);if(b){const remain=billRemaining(b);if(remain>0){if(b.paid&&b.paid[state.month])delete b.paid[state.month];state.txns.push({id:uid(),date:today(),type:"bill",bill:b.id,amount:remain,note:b.name});toast("Bill paid")}}closeSheet();return render()}
+if(a==="saveBillPay"){const b=state.bills.find(x=>x.id===d.id);if(b){const amount=num($("#billPayAmount").value), before=billRemaining(b);if(amount>0){if(b.paid&&b.paid[state.month])delete b.paid[state.month];state.txns.push({id:uid(),date:$("#billPayDate").value||today(),type:"bill",bill:b.id,amount:Math.min(amount,before||amount),note:b.name});toast(amount>=before?"Bill paid":"Payment added")}}closeSheet();return render()}
+if(a==="clearBillPay"){const b=state.bills.find(x=>x.id===d.id);if(b?.paid)delete b.paid[state.month];state.txns=state.txns.filter(t=>!(t.type==="bill"&&t.bill===d.id&&String(t.date).slice(0,7)===state.month));toast("Payments cleared");closeSheet();return render()}
+if(a==="payBill")return billPaySheet(d.id);
+if(a==="unpayBill"){const b=state.bills.find(x=>x.id===d.id);if(b?.paid)delete b.paid[state.month];state.txns=state.txns.filter(t=>!(t.type==="bill"&&t.bill===d.id&&String(t.date).slice(0,7)===state.month));return render()}
+if(a==="deleteIncome"){deleteById(state.income,d.id);toast("Income deleted");return render()}
+if(a==="deleteBill"){deleteById(state.bills,d.id);state.txns=state.txns.filter(t=>t.bill!==d.id);toast("Bill deleted");return render()}
+if(a==="deleteCat"){deleteById(state.cats,d.id);toast("Category deleted");return render()}
+if(a==="pay")return paySheet();if(a==="savePay"){state.settings.nextPayday=$("#pDate").value;state.settings.payAmount=num($("#pAmount").value);closeSheet();return render()}if(a==="debt")return debtSheet();if(a==="saveDebt"){state.debts.push({id:uid(),name:$("#dName").value||"Debt",balance:num($("#dBalance").value),min:num($("#dMin").value)});closeSheet();return render()}
+if(a==="backup")return exportBackup();if(a==="csv")return exportCSV();if(a==="import"){$("#fileInput").click();return}if(a==="privacy")return privacySheet();if(a==="theme"){state.theme=state.theme==="dark"?"light":"dark";return render()}if(a==="reset"){if(confirm("Erase all Allotted data on this device?")){localStorage.removeItem(KEY);state=blank();render()}return}}
 $("#fileInput").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);normalize();save();render();toast("Backup restored")}catch(err){alert("Could not restore backup.")}};r.readAsText(f);e.target.value=""});
 load();render();
 })();
