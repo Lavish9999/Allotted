@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>Allotted</title>
-<meta name="description" content="Allotted — give every dollar a job. A clean monthly zero-based budgeting tracker.">
+<meta name="description" content="Allotted — private safe-to-spend budgeting. Lock bill money and know what you can spend today without connecting a bank.">
 <meta name="theme-color" content="#0B0E10">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -119,6 +119,61 @@ svg text{font-family:ui-monospace,'SF Mono',Menlo,monospace}
 .dd-row:hover,.dd-row:active{background:var(--tealsoft);color:var(--teal)}
 .catopt{display:block;width:100%;text-align:left;background:var(--inputbg);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;cursor:pointer}
 .catopt.on{background:var(--tealsoft);border-color:var(--tealb);color:var(--teal)}
+
+/* clean-mode polish */
+details > summary::-webkit-details-marker{display:none}
+details > summary::marker{content:""}
+@media(max-width:520px){.sheet-grid[style*="1fr 1fr"]{grid-template-columns:1fr!important}}
+/* standout edition */
+.hero-safe{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--tealsoft),var(--card));border-color:var(--tealb)}
+.hero-safe:before{content:"";position:absolute;inset:-45% -20% auto auto;width:180px;height:180px;border-radius:999px;background:radial-gradient(circle,rgba(45,212,191,.18),transparent 65%);pointer-events:none}
+.focus-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.focus-tile{background:var(--inset);border:1px solid var(--line);border-radius:15px;padding:12px}
+.focus-tile .ft-label{font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:850;margin-bottom:5px}
+.focus-tile .ft-value{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:20px;font-weight:950;letter-spacing:-.03em}
+.pulse-ring{width:64px;height:64px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--teal) var(--pulse),var(--track) 0);box-shadow:0 0 0 1px var(--line) inset}
+.pulse-ring span{width:49px;height:49px;border-radius:999px;background:var(--sheet);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:16px;font-weight:950;color:var(--text)}
+.smart-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.smart-row:last-child{border-bottom:none}
+.smart-dot{width:8px;height:8px;border-radius:999px;flex:0 0 auto;margin-top:4px}
+.action-strip{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:9px;margin:0 0 14px}
+.action-strip .btn{padding:13px 0;font-size:13.5px}
+.afford-result{border:1px solid var(--line);background:var(--inset);border-radius:16px;padding:14px;margin-top:12px}
+@media(max-width:520px){.action-strip{grid-template-columns:1fr 1fr}.action-strip .primary-wide{grid-column:1/-1}.focus-grid{grid-template-columns:1fr 1fr}}
+
+
+/* ================= Robert's reimagined standout UI ================= */
+:root{--gold:#F6C76D;--mint:#94F2DF;--ink:#07090A;--deep:#0B0F12;--panel:rgba(255,255,255,.055);--panel2:rgba(255,255,255,.085)}
+body{
+  background:
+    radial-gradient(90% 70% at 15% 0%, rgba(45,212,191,.16) 0%, transparent 55%),
+    radial-gradient(85% 70% at 90% 12%, rgba(246,199,109,.12) 0%, transparent 54%),
+    linear-gradient(180deg,#060809 0%,#0B0E10 58%,#07090A 100%);
+  letter-spacing:-.012em;
+}
+[data-theme="light"] body{
+  background:
+    radial-gradient(90% 70% at 15% 0%, rgba(13,148,136,.12) 0%, transparent 55%),
+    radial-gradient(85% 70% at 90% 12%, rgba(194,113,12,.10) 0%, transparent 54%),
+    linear-gradient(180deg,#F8FAFA 0%,#EFF4F4 100%);
+}
+.wrap{max-width:980px;padding:14px 16px 20px}.narrow{max-width:860px}.header{border-bottom:0;padding:calc(12px + env(safe-area-inset-top)) 16px 10px;background:linear-gradient(180deg,rgba(255,255,255,.025),transparent)}
+.card,.gcard{border-radius:26px;background:linear-gradient(180deg,var(--panel2),var(--panel));border-color:rgba(255,255,255,.10);box-shadow:0 18px 55px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.08)}
+[data-theme="light"] .card,[data-theme="light"] .gcard{background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,255,255,.78));box-shadow:0 18px 40px rgba(16,24,32,.08), inset 0 1px 0 rgba(255,255,255,.7)}
+.nav{bottom:calc(12px + env(safe-area-inset-bottom))}.nav-inner{gap:4px;padding:6px;border-radius:26px;background:rgba(10,14,16,.78);border-color:rgba(255,255,255,.12)}[data-theme="light"] .nav-inner{background:rgba(255,255,255,.82)}
+.nav button{min-width:48px;justify-content:center;padding:12px 12px}.nav button.on{border-radius:20px;background:linear-gradient(135deg,var(--tealsoft),rgba(246,199,109,.10));box-shadow:0 0 0 1px var(--tealb)}
+.btn-teal{background:linear-gradient(135deg,#5EF2DA,#20C7B5 62%,#17A99A);box-shadow:0 10px 28px rgba(45,212,191,.28)}
+.btn-ghost{background:rgba(255,255,255,.055)}
+[data-theme="light"] .btn-ghost{background:rgba(0,0,0,.045)}
+.topbar-v2{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:980px;margin:0 auto}.brand-v2{display:flex;align-items:center;gap:10px}.brand-v2 .word{font-weight:950;font-size:17px;letter-spacing:-.03em}.month-pill{display:flex;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px}.month-pill button{background:transparent;border:0;color:var(--dim);height:30px;min-width:30px;display:flex;align-items:center;justify-content:center;border-radius:999px}.month-pill #mpick{min-width:112px;color:var(--text);font-weight:900;font-size:13px;padding:0 4px}.gear-v2{background:var(--panel)!important;border:1px solid var(--line)!important;color:var(--dim)!important;border-radius:999px!important;width:38px!important;height:38px!important;display:flex!important;align-items:center!important;justify-content:center!important}
+.mode-tabs-v2{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:22px;padding:6px;margin:0 0 14px}.mode-tabs-v2 button{border:0;border-radius:16px;padding:12px 10px;font-size:13px;font-weight:950;background:transparent;color:var(--dim)}.mode-tabs-v2 button.on{background:linear-gradient(135deg,var(--tealsoft),rgba(246,199,109,.12));color:var(--teal);box-shadow:inset 0 0 0 1px var(--tealb)}
+.daily-command{position:relative;overflow:hidden;border-radius:34px;padding:22px;background:linear-gradient(145deg,rgba(45,212,191,.18),rgba(255,255,255,.055) 38%,rgba(246,199,109,.09));border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 80px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.10);margin-bottom:14px}.daily-command:before{content:"";position:absolute;inset:-90px -50px auto auto;width:210px;height:210px;border-radius:50%;background:radial-gradient(circle,rgba(45,212,191,.28),transparent 66%);filter:blur(2px)}
+.command-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;position:relative}.safe-stack{min-width:0}.eyebrow{font-size:10px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}.safe-amount{font-size:clamp(48px,12vw,78px);font-weight:950;line-height:.95;letter-spacing:-.07em;margin:10px 0 7px;color:var(--teal);text-shadow:0 0 34px rgba(45,212,191,.35)}.safe-copy{font-size:13.5px;color:var(--dim);line-height:1.48;max-width:370px}.pulse-dial{--pulse:72%;width:94px;height:94px;border-radius:50%;background:conic-gradient(var(--teal) var(--pulse),rgba(255,255,255,.09) 0);padding:8px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}.pulse-dial>div{width:100%;height:100%;border-radius:50%;background:var(--bg);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center}.pulse-dial b{font-size:25px;line-height:1}.pulse-dial span{font-size:9px;color:var(--dim);font-weight:900;letter-spacing:.12em;text-transform:uppercase}.command-actions{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:9px;margin-top:18px;position:relative}.command-actions .btn{padding:13px 10px}.metric-ribbon{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.ribbon-cell{background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:18px;padding:11px;min-width:0}.ribbon-cell .k{font-size:9.5px;font-weight:900;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}.ribbon-cell .v{font-size:18px;font-weight:950;margin-top:5px}.ribbon-cell .s{font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brief-board{display:grid;grid-template-columns:1fr;gap:10px;margin:14px 0}.brief-card{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:22px;padding:14px 15px}.brief-dot{width:10px;height:10px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 5px var(--tealsoft);flex:0 0 auto}.brief-title{font-weight:900;font-size:14px}.brief-sub{font-size:12.2px;color:var(--dim);margin-top:2px;line-height:1.35}
+.bill-runway{position:relative;margin-top:10px}.runway-row{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;position:relative;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}.runway-row:last-child{border-bottom:0}.runway-date{text-align:center;border-radius:16px;background:var(--inset);border:1px solid var(--line);padding:8px 4px}.runway-date b{display:block;font-size:17px}.runway-date span{font-size:9px;color:var(--dim);font-weight:900;text-transform:uppercase;letter-spacing:.08em}.runway-name{font-size:14px;font-weight:900}.runway-meta{font-size:11.5px;color:var(--dim);margin-top:3px}.status-chip{font-size:10px;font-weight:900;border-radius:999px;padding:4px 8px;white-space:nowrap}.paid-chip{background:var(--tealsoft);color:var(--teal)}.danger-chip{background:var(--redsoft);color:var(--red)}.caution-chip{background:var(--orangesoft);color:var(--orange)}
+.allocation-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}.allocation-lane{border-radius:26px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);padding:14px}.lane-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}.lane-title{font-size:15px;font-weight:950}.lane-total{font-size:12px;font-weight:900;color:var(--dim)}.allocation-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:11px 0;cursor:pointer}.allocation-row:first-of-type{border-top:0}.row-title{font-weight:800;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row-sub{font-size:11px;color:var(--dim);margin-top:3px}.money-map{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.map-piece{border-radius:18px;background:var(--inset);border:1px solid var(--line);padding:11px}.map-piece .k{font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;font-weight:900}.map-piece .v{font-size:18px;font-weight:950;margin-top:5px}.log-console{display:grid;grid-template-columns:1fr;gap:10px}.decision-card{border-radius:30px;padding:18px;background:linear-gradient(135deg,rgba(246,199,109,.13),rgba(45,212,191,.10));border:1px solid rgba(255,255,255,.12);margin-bottom:12px}.tool-grid-v2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.tool-tile{display:flex;align-items:center;gap:12px;text-align:left;border:1px solid var(--line);border-radius:22px;background:var(--panel);color:var(--text);padding:15px 14px;width:100%}.tool-tile .ico{color:var(--teal);display:flex}.tool-tile b{display:block;font-size:14px}.tool-tile span{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;line-height:1.35}.empty-v2{text-align:center;padding:34px 20px;border:1px dashed var(--line);border-radius:26px;background:rgba(255,255,255,.025);color:var(--dim);line-height:1.55}.amount-pill{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-weight:950;font-size:15px;white-space:nowrap}.section-title-v2{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:18px 0 10px}.section-title-v2 h2{font-size:18px;letter-spacing:-.03em}.section-title-v2 p{font-size:12px;color:var(--dim)}
+@media(max-width:680px){.command-top{display:block}.pulse-dial{position:absolute;right:0;top:0;width:76px;height:76px}.safe-copy{padding-right:88px}.command-actions{grid-template-columns:1fr 1fr}.command-actions .primary-wide{grid-column:1/-1}.metric-ribbon,.money-map{grid-template-columns:1fr 1fr}.topbar-v2{align-items:flex-start}.brand-v2 .tag{display:none}.month-pill #mpick{min-width:96px;font-size:12px}.safe-amount{font-size:56px}}
+
 </style>
 </head>
 <body>
@@ -499,15 +554,20 @@ function render(){
 }
 
 function welcomeHTML(){
-  return '<div class="card" style="text-align:center;max-width:440px;margin:10px auto;padding:32px 24px">'
-    +'<div style="display:flex;justify-content:center;margin-bottom:14px">'+logoSVG(72,true)+'</div>'
-    +'<div style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px">Allotted</div>'
-    +'<div style="color:var(--teal);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:20px">Private budgeting · no bank login</div>'
-    +'<div style="color:var(--dim);font-size:13.5px;line-height:1.65;margin-bottom:22px">Plan your month, lock bill money, and see what is safe to spend today. Manual by design, private by default, and everything stays on this device.</div>'
-    +'<button id="wOnboard" class="btn btn-teal" style="margin-bottom:10px">Build my first budget</button>'
-    +'<button id="wDemo" class="btn btn-ghost" style="margin-bottom:10px;color:var(--teal);border-color:var(--tealb)">Try demo budget</button>'
+  return '<div class="card hero-safe" style="text-align:center;max-width:460px;margin:10px auto;padding:34px 24px">'
+    +'<div style="display:flex;justify-content:center;margin-bottom:14px">'+logoSVG(74,true)+'</div>'
+    +'<div style="font-size:28px;font-weight:950;letter-spacing:-.035em;margin-bottom:5px">Allotted</div>'
+    +'<div style="color:var(--teal);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin-bottom:18px">Safe-to-spend budgeting</div>'
+    +'<div style="color:var(--dim);font-size:14px;line-height:1.6;margin:0 auto 20px;max-width:360px">Know what you can spend today after bills and savings are protected. No bank login, no ads, no tracking.</div>'
+    +'<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:20px;text-align:left">'
+    +'<div class="focus-tile"><div class="ft-label">Protect</div><div style="font-size:13px;color:var(--text);font-weight:800">Lock bill money before flexible spending.</div></div>'
+    +'<div class="focus-tile"><div class="ft-label">Decide</div><div style="font-size:13px;color:var(--text);font-weight:800">Use “Can I buy this?” before you swipe.</div></div>'
+    +'<div class="focus-tile"><div class="ft-label">Stay private</div><div style="font-size:13px;color:var(--text);font-weight:800">Manual by design. Data stays on device.</div></div>'
+    +'</div>'
+    +'<button id="wOnboard" class="btn btn-teal" style="margin-bottom:10px">Build my budget</button>'
+    +'<button id="wDemo" class="btn btn-ghost" style="margin-bottom:10px;color:var(--teal);border-color:var(--tealb)">Try the standout demo</button>'
     +'<button id="wTemplate" class="btn btn-ghost" style="margin-bottom:10px;color:var(--text)">Start with a template</button>'
-    +'<button id="wBlank" class="btn btn-ghost" style="margin-bottom:10px;color:var(--text)">Enter app without setup</button>'
+    +'<button id="wBlank" class="btn btn-ghost" style="margin-bottom:10px;color:var(--text)">Enter app manually</button>'
     +'<button id="wImport" class="btn btn-ghost" style="color:var(--text)">Restore from backup</button>'
     +'</div>';
 }
@@ -791,25 +851,24 @@ function budgetHTML(m,t){
     h+='<button id="startOver" class="addline" style="margin:0 0 12px;padding:6px 10px;border-radius:10px;background:var(--inset);border:1px solid var(--line);color:var(--dim)">'+I.left+' Start over</button>';
   const zb=zeroStatus(m), mb=moneyBreakdown(m);
   h+=warningCards("budget",m,t);
-  h+='<div class="card" style="padding:14px 16px;margin-bottom:12px"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div><div class="label" style="color:'+zb.color+'">Zero-based check</div><div style="font-size:17px;font-weight:900;margin-top:6px;color:'+zb.color+'">'+zb.label+'</div><div style="font-size:12.5px;color:var(--dim);margin-top:4px;line-height:1.45">'+zb.sub+'</div></div><button id="budgetTemplate" class="btn btn-ghost" style="width:auto;flex:0 0 auto;padding:10px 12px;color:var(--text);font-size:12px">Templates</button></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px"><div style="background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:10px"><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Locked bills</div><div class="mono" style="font-size:18px;font-weight:800;color:var(--teal);margin-top:3px">'+fmt(mb.fixed)+'</div></div><div style="background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:10px"><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Flexible planned</div><div class="mono" style="font-size:18px;font-weight:800;margin-top:3px">'+fmt(mb.flexPlan)+'</div></div></div></div>';
-  h+='<button id="moveMoney" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 14px;color:var(--teal);border-color:var(--tealb)">'+I.up+' Move money between categories</button>';
-  const compactSection=(num,title,color,items,addAct,extraRight)=>{
+  h+='<div class="card" style="padding:15px 16px;margin-bottom:12px"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div><div class="label" style="color:'+zb.color+'">Money plan</div><div style="font-size:17px;font-weight:950;margin-top:6px;color:'+zb.color+'">'+zb.label+'</div><div style="font-size:12.5px;color:var(--dim);margin-top:4px;line-height:1.45">'+zb.sub+'</div></div><button id="budgetTemplate" class="btn btn-ghost" style="width:auto;flex:0 0 auto;padding:10px 12px;color:var(--text);font-size:12px">Templates</button></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px">'
+    +'<div style="background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:10px"><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Locked bills</div><div class="mono" style="font-size:18px;font-weight:900;color:var(--teal);margin-top:3px">'+fmt(mb.fixed)+'</div></div>'
+    +'<div style="background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:10px"><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Flexible planned</div><div class="mono" style="font-size:18px;font-weight:900;margin-top:3px">'+fmt(mb.flexPlan)+'</div></div>'
+    +'<div style="background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:10px"><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Savings</div><div class="mono" style="font-size:18px;font-weight:900;color:var(--purple);margin-top:3px">'+fmt(mb.savings)+'</div></div>'
+    +'<div style="background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:10px"><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Left</div><div class="mono" style="font-size:18px;font-weight:900;color:'+zb.color+';margin-top:3px">'+fmt(mb.left)+'</div></div>'
+    +'</div></div>';
+  h+='<button id="moveMoney" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 14px;color:var(--teal);border-color:var(--tealb)">'+I.up+' Move money</button>';
+  const compactSection=(title,color,items,addAct,extraRight,open)=>{
     const rows=items.map(i=>'<div class="grow" data-edit="'+addAct+':'+i.id+'"><div class="gn">'+esc(i.name)+'</div><div class="gv">'+fmt(i.amount||0)+'</div></div>').join("")
-      ||'<div class="grow" style="cursor:default;color:var(--dim);font-size:12px">—</div>';
-    return '<div class="gcard"><div class="ghead"><div class="gname" style="color:'+color+'">'+num+' · '+title+'</div>'
-      +'<span class="gtot">'+extraRight+'</span></div>'+rows
-      +'<button class="gadd" data-add="'+addAct+'">'+I.plus+' Add line</button></div>';
+      ||'<div class="grow" style="cursor:default;color:var(--dim);font-size:12px">Nothing here yet</div>';
+    return '<details '+(open?'open':'')+' style="margin-bottom:10px"><summary class="gcard" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;list-style:none"><span style="font-weight:900;color:'+color+'">'+title+'</span><span class="gtot">'+extraRight+'</span></summary><div class="gcard" style="border-top-left-radius:0;border-top-right-radius:0;margin-top:-10px;padding-top:6px">'+rows+'<button class="gadd" data-add="'+addAct+'">'+I.plus+' Add line</button></div></details>';
   };
-  // income + savings side by side on top
-  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;align-items:start;margin-bottom:6px">'
-    +compactSection("1","INCOME","var(--teal)",m.income,"income",'<span style="color:var(--teal)">'+fmt(t.income)+'</span>')
-    +compactSection("2","SAVINGS","var(--purple)",m.savings,"savings",'<span style="color:'+(t.rate>=15?"var(--teal)":"var(--orange)")+'">'+t.rate.toFixed(0)+'% rate</span>')
-    +'</div>';
-  // spend buckets: Fixed Bills, Monthly Expenses, Other (Other only shown when it has lines)
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px"><div class="label" style="color:var(--orange)">3 · Spend</div></div>';
-  h+='<div class="sheet-grid">';
+  h+=compactSection("Income","var(--teal)",m.income,"income",'<span style="color:var(--teal)">'+fmt(t.income)+'</span>',true);
+  h+=compactSection("Savings","var(--purple)",m.savings,"savings",'<span style="color:'+(t.rate>=15?"var(--teal)":"var(--orange)")+'">'+t.rate.toFixed(0)+'% rate</span>',false);
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 10px"><div class="label" style="color:var(--orange)">Spending plan</div></div>';
   m.groups.forEach(g=>{
-    if(g.name===G_OTHER && !g.items.length) return; // Other is a fallback only
+    if(g.name===G_OTHER && !g.items.length) return;
     const gp=g.items.reduce((s,i)=>s+(i.planned||0),0);
     const ga=g.items.reduce((s,i)=>s+(i.actual||0),0);
     const isFixed=g.name===G_FIXED;
@@ -820,17 +879,15 @@ function budgetHTML(m,t){
         +(i.dueDay>0?'<div class="gspent" style="color:var(--dim)">due '+ordinal(i.dueDay)+'</div>':'')
         +(itemBucket(i)===G_FLEX?'<div style="margin-top:4px">'+healthPill(i)+'</div>':'')
         +(i.actual>0?'<div class="gspent" style="color:'+(over?"var(--red)":"var(--dim)")+'">'+fmtC(i.actual)+' spent'+(over?' · over':'')+'</div>':'')
-        +'</div>'
-        +'<div class="gv">'+fmt(i.planned||0)+'</div></div>';
+        +'</div><div class="gv">'+fmt(i.planned||0)+'</div></div>';
     }).join("")||'<div class="grow" style="cursor:default;color:var(--dim);font-size:12px">'+(isFixed?'No fixed bills yet':'Nothing here yet')+'</div>';
-    h+='<div class="gcard"><div class="ghead">'
-      +'<div class="gname" style="display:inline-flex;align-items:center;gap:6px">'+(isFixed?'<span style="color:var(--dim);opacity:.7;display:inline-flex">'+I.repeat+'</span>':'')+esc(g.name)+'</div>'
-      +'<span class="gtot">'+(ga>0?'<span style="color:'+(ga>gp?"var(--red)":"var(--teal)")+'">'+fmt(ga)+'</span>/':'')+fmt(gp)+'</span></div>'
-      +rows
-      +'<button class="gadd" data-add="item:'+g.id+'">'+I.plus+' Add line</button></div>';
+    const open=isFixed||g.name===G_FLEX;
+    h+='<details '+(open?'open':'')+' style="margin-bottom:10px"><summary class="gcard" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;list-style:none">'
+      +'<span style="font-weight:900;display:inline-flex;align-items:center;gap:6px">'+(isFixed?'<span style="color:var(--dim);opacity:.7;display:inline-flex">'+I.repeat+'</span>':'')+esc(g.name)+'</span>'
+      +'<span class="gtot">'+(ga>0?'<span style="color:'+(ga>gp?"var(--red)":"var(--teal)")+'">'+fmt(ga)+'</span>/':'')+fmt(gp)+'</span></summary>'
+      +'<div class="gcard" style="border-top-left-radius:0;border-top-right-radius:0;margin-top:-10px;padding-top:6px">'+rows+'<button class="gadd" data-add="item:'+g.id+'">'+I.plus+' Add line</button></div></details>';
   });
-  h+='</div>';
-  h+='<button id="addGroup" class="btn btn-ghost" style="margin-top:12px;border-radius:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px;max-width:260px">'+I.plus+' Add category</button>';
+  h+='<button id="addGroup" class="btn btn-ghost" style="margin-top:4px;border-radius:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px;max-width:260px">'+I.plus+' Add category</button>';
   return h;
 }
 
@@ -838,65 +895,42 @@ function trackHTML(m,t){
   let h='';
   h+=warningCards("track",m,t);
   const mb=moneyBreakdown(m);
-  if(mb.fixed>0)h+='<div class="card" style="padding:14px 16px;margin-bottom:12px;background:var(--tealsoft);border-color:var(--tealb)"><div class="label" style="color:var(--teal)">Bill money locked</div><div class="mono" style="font-size:24px;font-weight:900;color:var(--teal);margin-top:6px">'+fmt(mb.fixed)+'</div><div style="font-size:12.5px;color:var(--dim);line-height:1.45;margin-top:4px">This money is reserved for recurring bills. It is not included in safe-to-spend.</div></div>';
   const sts=safeToSpend(m);
   if(sts){
     const hot=sts.flexSpent>sts.flexPlanned*0.85;
     const col=sts.over?"var(--red)":(hot?"var(--orange)":"var(--teal)");
     const glow=sts.over?"rgba(248,113,113,.35)":(hot?"rgba(245,155,69,.35)":"rgba(45,212,191,.4)");
-    h+='<div class="card" style="text-align:center;padding:18px 18px 16px;margin-bottom:16px">'
-      +'<div style="color:var(--dim);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;margin-bottom:6px">Safe to spend today</div>'
-      +'<div class="mono" style="font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1;color:'+col+';text-shadow:0 0 24px '+glow+'">'+fmt(sts.over?0:sts.perDay)+'</div>'
-      +'<div style="font-size:12px;color:var(--dim);margin-top:8px;line-height:1.5">'
-      +(sts.over
-          ?'You\u2019re '+fmt(-sts.pool)+' over your flexible budget'
-          :fmt(sts.pool)+' left in flexible spending \u00b7 '+sts.daysLeft+' day'+(sts.daysLeft>1?'s':'')+' to go')
+    h+='<div class="card hero-safe" style="text-align:center;padding:20px 18px 18px;margin-bottom:14px">'
+      +'<div style="color:var(--teal);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:950;margin-bottom:6px">Safe to spend today</div>'
+      +'<div class="mono" style="font-size:48px;font-weight:950;letter-spacing:-.045em;line-height:1;color:'+col+';text-shadow:0 0 24px '+glow+'">'+fmt(sts.over?0:sts.perDay)+'</div>'
+      +'<div style="font-size:12.5px;color:var(--dim);margin-top:8px;line-height:1.5">'
+      +(sts.over?'You’re '+fmt(-sts.pool)+' over flexible spending. Bill money is not included.':fmt(sts.pool)+' left in flexible spending · '+sts.daysLeft+' day'+(sts.daysLeft>1?'s':'')+' to go')
       +'</div></div>';
+  }else if(mb.fixed>0){
+    h+='<div class="card" style="padding:14px 16px;margin-bottom:12px;background:var(--tealsoft);border-color:var(--tealb)"><div class="label" style="color:var(--teal)">Bill money locked</div><div class="mono" style="font-size:24px;font-weight:900;color:var(--teal);margin-top:6px">'+fmt(mb.fixed)+'</div><div style="font-size:12.5px;color:var(--dim);line-height:1.45;margin-top:4px">This money is reserved for recurring bills. It is not included in safe-to-spend.</div></div>';
   }
-  h+='<button id="logTxn" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Log a transaction</button>';
+  h+='<div class="action-strip"><button id="logTxn" class="btn btn-teal primary-wide" style="display:flex;align-items:center;justify-content:center;gap:8px">'+I.plus+' Log spending</button><button id="spendAfford" class="btn btn-ghost" style="color:var(--text)">Can I buy?</button><button id="dashMove" class="btn btn-ghost" style="color:var(--text)">Move</button></div>';
   const hasLines=m.groups.some(g=>g.items.length);
   if(!hasLines){
     h+='<div style="text-align:center;padding:30px 20px;color:var(--dim);font-size:13px;line-height:1.6">No spending categories yet.<br>Add categories on the <b style="color:var(--teal)">Budget</b> tab first, then track spending here.</div>';
     return h;
   }
   let dueRec=0;m.groups.forEach(g=>g.items.forEach(i=>{if(i.recurring&&((i.planned||0)-(i.actual||0))>0.5)dueRec++;}));
-  if(dueRec)h+='<button id="payAllRec" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:-4px auto 16px;color:var(--teal);border-color:var(--tealb)">'+I.check+' Mark '+dueRec+' recurring bill'+(dueRec>1?'s':'')+' paid</button>';
-  h+='<div class="sheet-grid">';
+  if(dueRec)h+='<button id="payAllRec" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:-2px auto 14px;color:var(--teal);border-color:var(--tealb)">'+I.check+' Mark '+dueRec+' recurring bill'+(dueRec>1?'s':'')+' paid</button>';
+  h+=recentTransactionsHTML(m);
+  h+='<details style="margin-top:14px"><summary style="cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:850;padding:10px 2px">Show category breakdown</summary><div class="sheet-grid" style="margin-top:8px">';
   m.groups.forEach(g=>{
     if(!g.items.length)return;
-    const gp=g.items.reduce((s,i)=>s+(i.planned||0),0);
-    const ga=g.items.reduce((s,i)=>s+(i.actual||0),0);
-    const gc=g.items.reduce((s,i)=>s+(i.rollover?rolloverCarry(mk,g.name,i.name):0),0);
-    const avail=gp+gc;
-    const rem=avail-ga;
-    const pct=avail>0?Math.min(ga/avail*100,100):0;
-    const over=ga>avail+0.5;
-    const barCol=over?"var(--red)":(ga>avail*0.85?"var(--orange)":"var(--teal)");
-    h+='<div class="gcard">'
-      +'<div class="ghead" data-gtxn="'+g.id+'" style="flex-direction:column;align-items:stretch;gap:8px;padding:11px 13px;cursor:pointer">'
-      +'<div style="display:flex;justify-content:space-between;align-items:baseline">'
-      +'<span class="gname" style="display:inline-flex;align-items:center;gap:5px">'+esc(g.name)+'<span style="color:var(--dim);opacity:.45;display:inline-flex;transform:scale(.8)">'+I.right+'</span></span>'
-      +'<span class="mono" style="font-size:15px;font-weight:700;color:'+(rem<0?"var(--red)":"var(--text)")+'">'+fmt(rem)+'<span style="color:var(--dim);font-size:11px;font-weight:600"> left</span></span></div>'
-      +'<div class="minibar" style="height:6px"><div style="width:'+pct+'%;background:'+barCol+'"></div></div>'
-      +'<div class="mono" style="font-size:10.5px;color:var(--dim)">'+fmt(ga)+' of '+fmt(avail)+' spent'+(Math.abs(gc)>0.5?' · '+(gc>0?'+':'')+fmt(gc)+' rolled over':'')+'</div>'
-      +'</div>';
-    g.items.forEach(i=>{
-      const carry=i.rollover?rolloverCarry(mk,g.name,i.name):0;
-      const irem=(i.planned||0)+carry-(i.actual||0);
-      const n=(i.txns||[]).length;
-      const showPay=i.recurring&&irem>0.5;
-      h+='<div class="grow" data-txn="'+g.id+':'+i.id+'">'
-        +'<div class="gn">'+esc(i.name)+(i.recurring?' <span style="color:var(--dim);opacity:.6;vertical-align:middle">'+I.repeat+'</span>':'')+(i.rollover?' <span style="color:var(--purple);opacity:.8;vertical-align:middle">'+I.up+'</span>':'')
-        +'<div class="gspent" style="color:var(--dim)">'+fmt(i.actual||0)+' spent'+(n?' · '+n+' txn'+(n>1?'s':''):'')+(Math.abs(carry)>0.5?' · '+(carry>0?'+':'')+fmt(carry)+' rolled':'')+'</div>'
-        +(itemBucket(i)===G_FLEX?'<div style="margin-top:4px">'+healthPill(i)+'</div>':'')+'</div>'
-        +'<div style="display:flex;align-items:center;gap:8px">'
-        +(showPay?'<button data-paid="'+g.id+':'+i.id+'" style="background:var(--tealsoft);border:1px solid var(--tealb);color:var(--teal);font-weight:800;font-size:11px;padding:5px 9px;border-radius:9px;display:flex;align-items:center;gap:4px">'+I.check+' Pay</button>':'')
-        +'<div class="gv" style="color:'+(irem<0?"var(--red)":"var(--text)")+'">'+fmt(irem)+'</div></div></div>';
-    });
-    h+='</div>';
+    const gp=g.items.reduce((a,i)=>a+(i.planned||0),0),ga=g.items.reduce((a,i)=>a+(i.actual||0),0);
+    const rows=g.items.map(i=>{
+      const avail=(i.planned||0)+rolloverCarry(mk,g.name,i.name)-(i.actual||0);
+      const pct=(i.planned||0)>0?Math.min(100,(i.actual||0)/(i.planned||1)*100):0;
+      const isFlex=itemBucket(i)===G_FLEX;
+      return '<div class="grow" data-txn="'+g.id+':'+i.id+'"><div class="gn"><div style="display:flex;align-items:center;gap:7px;min-width:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(i.name)+'</span>'+(isFlex?healthPill(i):'')+'</div><div class="gspent" style="color:'+(avail<0?'var(--red)':'var(--dim)')+'">'+fmt(i.actual||0)+' spent · '+fmt(avail)+' left</div><div class="minibar"><div style="width:'+pct+'%;background:'+(avail<0?'var(--red)':isFlex?'var(--teal)':'var(--orange)')+'"></div></div></div><div class="gv">'+fmt(i.planned||0)+'</div></div>';
+    }).join("");
+    h+='<div class="gcard"><div class="ghead"><div class="gname">'+esc(g.name)+'</div><span class="gtot">'+fmt(ga)+' / '+fmt(gp)+'</span></div>'+rows+'</div>';
   });
-  h+='</div>';
-  h+=recentTransactionsHTML(m);
+  h+='</div></details>';
   return h;
 }
 
@@ -1495,8 +1529,12 @@ function loadDemoBudget(){
   addFlex("Household",180,[[d(3),36,"Target"]]);
   addFlex("Personal",160,[]);
   S.debts=[{id:nid(),name:"Credit Card",balance:1850,minPayment:65,apr:24.99,dueDate:20,extraPayment:125,strategy:"snowball"},{id:nid(),name:"Student Loan",balance:4200,minPayment:105,apr:6.5,dueDate:10,extraPayment:0,strategy:"avalanche"}];
-  S.paychecks=[{id:nid(),name:"Next paycheck",amount:2450,dateReceived:S.settings.nextPayday,coversStartDate:now.toISOString().slice(0,10),coversEndDate:S.settings.nextPayday,assignedBillIds:[],assignedFlexibleCategories:[],notes:"Auto-plan demo"}];
-  syncBillsFromBudget(m); commit(); toast("Demo budget loaded","var(--teal)");
+  S.paychecks=[{id:nid(),name:"Next paycheck",amount:2450,dateReceived:S.settings.nextPayday,coversStartDate:now.toISOString().slice(0,10),coversEndDate:S.settings.nextPayday,assignedBillIds:[],assignedFlexibleCategories:[],notes:"Standout demo: auto-planned by due dates"}];
+  // keep demo realistic: bills already due earlier this month are paid, upcoming bills stay unpaid
+  S.bills.forEach(b=>{if((b.dueDay||1)<now.getDate()-2){b.paid[mk]=mk+"-"+String(clampDay(now.getFullYear(),now.getMonth(),b.dueDay||1)).padStart(2,"0");}});
+  syncBillsFromBudget(m);
+  S.bills.forEach(b=>{if(b.paid&&b.paid[mk])addBillPaymentToBudget(b,b.paid[mk],b.amount||0);});
+  commit(); toast("Standout demo loaded","var(--teal)");
 }
 
 
@@ -1823,6 +1861,82 @@ function feedbackLines(m,t){
   if(!out.length)out.push({t:"You're on track. Nice work.",c:"var(--teal)"});
   return out.slice(0,3);
 }
+
+function budgetPulse(m){
+  if(!m)return {score:0,label:"No plan yet",color:"var(--dim)",sub:"Build a budget to get your daily pulse."};
+  const b=moneyBreakdown(m), z=zeroStatus(m), sts=safeToSpend(m);
+  let score=100;
+  if(b.income<=0)score-=35;
+  if(z.state==="over")score-=28;
+  else if(z.state==="left")score-=10;
+  if(sts&&sts.over)score-=30;
+  if(sts&&sts.flexPlanned>0&&sts.flexSpent>sts.flexPlanned*.85&&!sts.over)score-=12;
+  const overdue=(S.bills||[]).filter(x=>billStatusForMonth(x,mk).state==="overdue").length;
+  const dueSoon=(S.bills||[]).filter(x=>{const st=billStatusForMonth(x,mk);return st.state==="soon"||st.state==="week";}).length;
+  score-=Math.min(28,overdue*14);
+  score-=Math.min(10,dueSoon*3);
+  if(b.fixed<=0&&b.income>0)score-=8;
+  score=Math.max(0,Math.min(100,Math.round(score)));
+  const color=score>=80?"var(--teal)":score>=55?"var(--orange)":"var(--red)";
+  const label=score>=80?"On track":score>=55?"Needs attention":"High risk";
+  const sub=score>=80?"Bills are protected and spending is controlled.":score>=55?"Fix the next warning before spending freely.":"Slow down and repair the plan first.";
+  return {score,label,color,sub};
+}
+function firstUpcomingBill(){
+  const today=todayLocal(); const end=new Date(today); end.setDate(end.getDate()+45);
+  return billOccurrencesBetween(today,end).filter(o=>!o.paid)[0]||null;
+}
+function quickMetric(label,value,sub,color){
+  return '<div class="focus-tile"><div class="ft-label">'+label+'</div><div class="ft-value" style="color:'+(color||"var(--text)")+'">'+value+'</div>'+(sub?'<div style="font-size:10.5px;color:var(--dim);margin-top:3px;line-height:1.35">'+sub+'</div>':'')+'</div>';
+}
+function dailyBriefHTML(m){
+  const mb=moneyBreakdown(m), z=zeroStatus(m), sts=safeToSpend(m), pulse=budgetPulse(m);
+  const next=firstUpcomingBill();
+  const rows=[];
+  const row=(c,t,s)=>rows.push('<div class="smart-row"><div style="display:flex;gap:10px;align-items:flex-start"><span class="smart-dot" style="background:'+c+'"></span><div><div style="font-weight:850;font-size:13.5px">'+t+'</div>'+(s?'<div style="font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:2px">'+s+'</div>':'')+'</div></div></div>');
+  if(z.state==="over")row("var(--red)",z.label,"Trim the budget before logging more flexible spending.");
+  else if(sts&&sts.over)row("var(--red)","Flexible spending is over by "+fmt(-sts.pool),"Move money or pause flexible purchases.");
+  else if(next){const d=dayDiff(todayLocal(),next.date);row(d<=3?"var(--orange)":"var(--teal",esc(next.bill.name)+" is due "+(d===0?"today":"in "+d+" day"+(d!==1?"s":"")),fmt(next.bill.amount||0)+" is protected outside safe-to-spend.");}
+  if(z.state==="left")row("var(--orange)",fmt(mb.left)+" still needs a job","Assign it so your safe number stays honest.");
+  if(sts&&!sts.over)row("var(--teal)","You can spend "+fmt(sts.perDay)+" today",fmt(sts.pool)+" left across flexible categories.");
+  if(!rows.length)row("var(--teal)","You are on plan","Nothing urgent needs fixing right now.");
+  return '<div class="card" style="padding:15px 16px;margin-bottom:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px"><div><div class="label">Today’s brief</div><div style="font-size:12px;color:var(--dim);margin-top:3px">One screen. One decision: spend, wait, or adjust.</div></div><div class="pulse-ring" style="--pulse:'+pulse.score+'%"><span>'+pulse.score+'</span></div></div><div style="font-size:12px;color:'+pulse.color+';font-weight:900;margin-bottom:6px">'+pulse.label+' · '+pulse.sub+'</div>'+rows.slice(0,3).join("")+'</div>';
+}
+function categoryOptionsForAfford(m){
+  const opts=[]; if(!m||!m.groups)return opts;
+  m.groups.forEach(g=>g.items.forEach(i=>{if(itemBucket(i)===G_FLEX)opts.push({gid:g.id,iid:i.id,name:i.name,left:(i.planned||0)-(i.actual||0)});}));
+  return opts;
+}
+function openAffordCheck(){
+  const m=M(); if(!m){toast("Create a budget first","var(--orange)");return;}
+  const cats=categoryOptionsForAfford(m);
+  const sts=safeToSpend(m);
+  if(!cats.length){toast("Add flexible spending categories first","var(--orange)");return;}
+  const sel='width:100%;background:var(--inputbg);border:1px solid var(--line);border-radius:13px;color:var(--text);padding:12px 14px;font-size:15px;outline:none';
+  sheet("Can I buy this?",
+    '<div style="font-size:13px;color:var(--dim);line-height:1.55;margin-bottom:16px">Check a purchase before you make it. Bill money and savings stay locked out of this answer.</div>'
+    +'<div style="display:flex;gap:10px"><div style="flex:1">'+fieldHTML("af_amt","Purchase amount","","number","0")+'</div><div style="flex:1"><label class="field"><span>Category</span><select id="af_cat" style="'+sel+'">'+cats.map(c=>'<option value="'+c.gid+':'+c.iid+'">'+esc(c.name)+' · '+fmt(Math.max(0,c.left))+' left</option>').join("")+'</select></label></div></div>'
+    +'<div id="af_result" class="afford-result"><div style="font-size:13px;color:var(--dim);line-height:1.5">Enter an amount to see if it fits your daily safe-to-spend plan.</div></div>'
+    +'<button id="af_log" class="btn btn-teal" style="margin-top:12px;display:none">Log this purchase</button>');
+  const amt=document.getElementById("af_amt"), cat=document.getElementById("af_cat"), res=document.getElementById("af_result"), log=document.getElementById("af_log");
+  function calc(){
+    const v=parseFloat(amt.value)||0; const parts=cat.value.split(":"); const g=m.groups.find(x=>x.id===parts[0]); const i=g&&g.items.find(x=>x.id===parts[1]);
+    if(!v||!i){res.innerHTML='<div style="font-size:13px;color:var(--dim);line-height:1.5">Enter an amount to see if it fits your plan.</div>';log.style.display="none";return;}
+    const left=(i.planned||0)-(i.actual||0); const pool=sts?sts.pool:0;
+    const ok=v<=left+0.005 && (!sts || v<=pool+0.005);
+    const tight=sts&&v>(sts.perDay*1.5)&&ok;
+    const color=ok?(tight?"var(--orange)":"var(--teal)"):"var(--red)";
+    const title=ok?(tight?"You can, but it tightens the week":"Yes — it fits"):(v>left?"No — category runs short":"No — flexible pool runs short");
+    const afterCat=left-v, afterPool=pool-v;
+    res.innerHTML='<div style="font-weight:950;font-size:17px;color:'+color+';margin-bottom:6px">'+title+'</div>'
+      +'<div style="font-size:12.5px;color:var(--dim);line-height:1.55">After this, '+esc(i.name)+' would have <b style="color:'+color+'">'+fmt(afterCat)+'</b> left. Your flexible pool would have <b style="color:'+color+'">'+fmt(afterPool)+'</b> left. Bill money is not included.</div>'
+      +(ok?'<div style="font-size:12px;color:var(--dim);margin-top:8px">Best move: log it right after buying so your safe number updates.</div>':'<div style="font-size:12px;color:var(--dim);margin-top:8px">Best move: wait, move money first, or lower the purchase amount.</div>');
+    log.style.display=ok?"block":"none";
+  }
+  amt.oninput=calc; cat.onchange=calc;
+  log.onclick=()=>{const v=parseFloat(amt.value)||0; const parts=cat.value.split(":"); closeModal(); openTxn(parts[0],parts[1]); setTimeout(()=>{const a=document.getElementById("t_amount"); if(a)a.value=v;},80);};
+}
+
 function dashCard(label,value,sub,color){
   return '<div class="gcard" style="padding:14px 15px">'
     +'<div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.09em;font-weight:600;margin-bottom:7px">'+label+'</div>'
@@ -1850,25 +1964,30 @@ function paycheckCardHTML(pc){
 function dashMini(label,value,sub,color){return '<div style="background:var(--inset);border:1px solid var(--line);border-radius:13px;padding:10px"><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:5px">'+label+'</div><div class="mono" style="font-size:18px;font-weight:900;color:'+color+'">'+value+'</div><div style="font-size:10.5px;color:var(--dim);margin-top:2px">'+sub+'</div></div>';}
 function paycheckPlannerHTML(){
   const sp=safeUntilPayday();
-  let h='<div class="card" style="margin-bottom:14px;background:var(--tealsoft);border-color:var(--tealb)"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="label" style="color:var(--teal)">Paycheck View</div><div style="font-size:13px;color:var(--dim);line-height:1.55;margin-top:7px">Allotted automatically looks at your next payday, unpaid bills, and flexible spending. Manual paycheck cards are optional.</div></div><button id="paycheckSettings" class="btn btn-ghost" style="width:auto;flex:0 0 auto;padding:10px 12px;color:var(--text);font-size:12px">Setup</button></div></div>';
+  let h='';
   if(!sp||sp.needPay){
-    h+='<div class="card" style="text-align:center;padding:34px 22px"><div style="font-weight:950;font-size:19px;margin-bottom:6px">Set up paycheck planning</div><div style="font-size:13px;color:var(--dim);line-height:1.55;margin-bottom:18px">Add your next payday and paycheck amount to see what each check needs to cover.</div><button id="setupPaycheck" class="btn btn-teal" style="max-width:320px;margin:0 auto;display:block">Set payday</button></div>';
+    h+='<div class="card" style="text-align:center;padding:34px 22px;background:var(--tealsoft);border-color:var(--tealb)"><div class="label" style="justify-content:center;color:var(--teal);margin-bottom:8px">Paycheck plan</div><div style="font-weight:950;font-size:21px;margin-bottom:7px">Plan by payday</div><div style="font-size:13px;color:var(--dim);line-height:1.55;margin:0 auto 18px;max-width:340px">Add your next payday and paycheck amount. Allotted will automatically protect bills before showing what is safe to spend.</div><button id="setupPaycheck" class="btn btn-teal" style="max-width:320px;margin:0 auto;display:block">Set payday</button></div>';
   }else{
     const info=sp.info; const bills=sp.bb?sp.bb.unpaid:[];
-    h+='<div class="card" style="padding:18px;margin-bottom:14px"><div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:13px"><div><div class="label">Next paycheck plan</div><div style="font-size:20px;font-weight:950;margin-top:5px">'+dateLabel(info.next)+'</div><div style="font-size:12.5px;color:var(--dim);margin-top:3px">'+sp.daysUntil+' day'+(sp.daysUntil!==1?'s':'')+' until payday</div></div><div class="mono" style="font-size:24px;font-weight:950;color:var(--teal)">'+fmt(sp.pay)+'</div></div>'
-      +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:12px">'
+    h+='<div class="card" style="text-align:center;padding:24px 18px 20px;margin-bottom:14px;background:linear-gradient(180deg,var(--tealsoft),var(--card));border-color:var(--tealb)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;text-align:left;margin-bottom:12px"><div><div class="label" style="color:var(--teal)">Safe until payday</div><div style="font-size:13px;color:var(--dim);margin-top:4px">Next payday '+dateLabel(info.next)+' · '+sp.daysUntil+' day'+(sp.daysUntil!==1?'s':'')+'</div></div><button id="paycheckSettings" class="btn btn-ghost" style="width:auto;flex:0 0 auto;padding:9px 12px;color:var(--text);font-size:12px">Setup</button></div>'
+      +'<div class="mono" style="font-size:52px;font-weight:950;letter-spacing:-.05em;line-height:.98;color:'+(sp.over?'var(--red)':'var(--teal)')+'">'+fmt(sp.over?0:sp.perDay)+'</div>'
+      +'<div style="font-size:13px;color:var(--dim);margin-top:10px;line-height:1.5">'+(sp.over?'This paycheck is short by '+fmt(-sp.left)+' after bills.':'After unpaid bills and planned savings are protected.')+'</div>'
+      +'</div>';
+    h+='<div class="card" style="padding:16px;margin-bottom:14px"><div class="label" style="margin-bottom:10px">Automatic paycheck breakdown</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px">'
+      +dashMini("Pay amount",fmt(sp.pay),"expected","var(--teal)")
       +dashMini("Bills before payday",fmt(sp.unpaidTotal),bills.length+" unpaid",sp.unpaidTotal>0?"var(--orange)":"var(--teal)")
       +dashMini("Flexible spent",fmt(sp.spent),"this period","var(--text)")
       +dashMini("Left after bills",fmt(sp.left),"paycheck money",sp.left<0?"var(--red)":"var(--teal)")
-      +dashMini("Safe until payday",fmt(sp.over?0:sp.perDay)+"/day",sp.daysUntil+" day"+(sp.daysUntil!==1?"s":""),sp.over?"var(--red)":"var(--teal)")
       +'</div>'
-      +'<div style="font-size:12.5px;color:var(--dim);line-height:1.45;margin-bottom:8px">Bill money is protected first. Safe-to-spend only starts after unpaid bills and planned savings are covered.</div>'
-      +(bills.length?'<div style="height:1px;background:var(--line);margin:12px 0 8px"></div>'+bills.slice(0,4).map(o=>'<div class="irow" data-billedit="'+o.bill.id+'"><div><div style="font-weight:800;font-size:13px">'+esc(o.bill.name)+'</div><div style="font-size:11.5px;color:var(--dim);margin-top:2px">due '+dateLabel(o.date)+(o.bill.autopay?' · autopay':'')+'</div></div><div class="mono" style="font-weight:900">'+fmt(o.bill.amount||0)+'</div></div>').join(""): '<div style="font-size:13px;color:var(--dim);padding-top:4px">No unpaid bills before payday.</div>')
+      +(bills.length?'<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:850;padding:8px 0">Bills before payday</summary><div style="margin-top:4px">'+bills.slice(0,6).map(o=>'<div class="irow" data-billedit="'+o.bill.id+'"><div><div style="font-weight:800;font-size:13px">'+esc(o.bill.name)+'</div><div style="font-size:11.5px;color:var(--dim);margin-top:2px">due '+dateLabel(o.date)+(o.bill.autopay?' · autopay':'')+'</div></div><div class="mono" style="font-weight:900">'+fmt(o.bill.amount||0)+'</div></div>').join("")+'</div></details>':'<div style="font-size:13px;color:var(--dim);padding-top:12px">No unpaid bills before payday.</div>')
       +'</div>';
   }
   const paychecks=S.paychecks||[];
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 2px 10px"><div class="label">Manual paycheck cards</div><button id="addPaycheck" style="background:none;border:none;color:var(--teal);font-size:12px;font-weight:900">'+I.plus+' Add</button></div>';
-  h+=paychecks.length?paychecks.slice().sort((a,b)=>(a.dateReceived||"").localeCompare(b.dateReceived||"")).map(pc=>paycheckCardHTML(pc)).join(""):'<div class="card" style="padding:18px;color:var(--dim);font-size:13px;line-height:1.5">Optional: add manual paycheck cards only when you want to assign specific bills or categories to a specific check.</div>';
+  h+='<details style="margin-top:14px"><summary style="cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:850;padding:10px 2px">Advanced manual paycheck cards</summary><div style="display:flex;align-items:center;justify-content:space-between;margin:10px 2px"><div class="label">Manual assignments</div><button id="addPaycheck" style="background:none;border:none;color:var(--teal);font-size:12px;font-weight:900">'+I.plus+' Add</button></div>';
+  h+=paychecks.length?paychecks.slice().sort((a,b)=>(a.dateReceived||"").localeCompare(b.dateReceived||"")).map(pc=>paycheckCardHTML(pc)).join(""):'<div class="card" style="padding:18px;color:var(--dim);font-size:13px;line-height:1.5">Optional: use manual paycheck cards only when you want to assign specific bills or categories to a specific check.</div>';
+  h+='</details>';
   return h;
 }
 function openPaycheckEdit(id){
@@ -1897,32 +2016,34 @@ function openPaycheckEdit(id){
 function dashboardHTML(m,t){
   syncBillsFromBudget(m);
   let h='<div class="narrow">';
-  h+='<div class="seg" style="margin-bottom:14px"><button data-budgetmode="monthly" style="'+(S.settings.budgetMode!=="paycheck"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Monthly View</button><button data-budgetmode="paycheck" style="'+(S.settings.budgetMode==="paycheck"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Paycheck View</button></div>';
+  h+='<div class="seg" style="margin-bottom:14px"><button data-budgetmode="monthly" style="'+(S.settings.budgetMode!=="paycheck"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Today</button><button data-budgetmode="paycheck" style="'+(S.settings.budgetMode==="paycheck"?"background:var(--tealsoft);color:var(--teal)":"background:transparent;color:var(--dim)")+'">Paycheck</button></div>';
   if(S.settings.budgetMode==="paycheck"){
-    h+=warningCards("dashboard",m,t)+paycheckPlannerHTML()+'</div>';
+    h+=warningCards("dashboard",m,t)+dailyBriefHTML(m)+paycheckPlannerHTML()+'</div>';
     return h;
   }
-  const mb=moneyBreakdown(m), zb=zeroStatus(m), sts=safeToSpend(m);
+  const mb=moneyBreakdown(m), zb=zeroStatus(m), sts=safeToSpend(m), pulse=budgetPulse(m);
   h+=warningCards("dashboard",m,t);
-  h+='<div class="card" style="text-align:center;padding:24px 18px 20px;margin-bottom:14px;background:linear-gradient(180deg,var(--tealsoft),var(--card));border-color:var(--tealb)">'
-    +'<div style="color:var(--teal);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:900;margin-bottom:6px">Safe to spend today</div>'
-    +'<div class="mono" style="font-size:52px;font-weight:950;letter-spacing:-.05em;line-height:.98;color:'+(sts&&sts.over?'var(--red)':'var(--teal)')+'">'+(sts?fmt(sts.over?0:sts.perDay):'—')+'</div>'
-    +'<div style="font-size:13px;color:var(--dim);margin-top:10px;line-height:1.5">'+(sts?(sts.over?'You are over flexible spending by '+fmt(-sts.pool)+'. Bill money is still protected.':'You can spend '+fmt(sts.perDay)+'/day and stay on plan. Bill money is not included.'):'Add flexible spending categories to calculate this.')+'</div>'
+  h+='<div class="card hero-safe" style="text-align:center;padding:26px 18px 22px;margin-bottom:14px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;text-align:left;margin-bottom:10px"><div><div style="color:var(--teal);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:950">Safe to spend today</div><div style="font-size:12px;color:var(--dim);margin-top:4px">Bills, savings, and unassigned cash are excluded.</div></div><div class="pulse-ring" style="--pulse:'+pulse.score+'%"><span>'+pulse.score+'</span></div></div>'
+    +'<div class="mono" style="font-size:62px;font-weight:950;letter-spacing:-.06em;line-height:.94;color:'+(sts&&sts.over?'var(--red)':'var(--teal)')+';text-shadow:0 0 30px rgba(45,212,191,.28)">'+(sts?fmt(sts.over?0:sts.perDay):'—')+'</div>'
+    +'<div style="font-size:13px;color:var(--dim);margin:12px auto 0;line-height:1.5;max-width:350px">'+(sts?(sts.over?'You are over flexible spending by '+fmt(-sts.pool)+'. Move money before spending again.':'You have '+fmt(sts.pool)+' left in flexible spending for '+sts.daysLeft+' day'+(sts.daysLeft!==1?'s':'')+'.'):'Add flexible categories to calculate your daily number.')+'</div>'
     +'</div>';
+  h+='<div class="action-strip"><button id="dashLog" class="btn btn-teal primary-wide">'+I.plus+' Log spending</button><button id="dashAfford" class="btn btn-ghost" style="color:var(--text)">Can I buy?</button><button id="dashBills" class="btn btn-ghost" style="color:var(--text)">Bills</button></div>';
+  h+=dailyBriefHTML(m);
+  const next=firstUpcomingBill();
+  h+='<div class="card" style="padding:14px 15px;margin-bottom:14px"><div class="label" style="margin-bottom:10px">Command center</div><div class="focus-grid">'
+    +quickMetric("Bill money locked",fmt(mb.fixed),"never safe-to-spend","var(--teal)")
+    +quickMetric("Left to assign",fmt(mb.left),zb.state==="good"?"every dollar has a job":"needs attention",zb.color)
+    +quickMetric("Flexible left",fmt(Math.max(0,mb.flexLeft)),"daily spend pool",mb.flexLeft<0?"var(--red)":"var(--teal)")
+    +quickMetric("Next bill",next?fmt(next.bill.amount||0):"—",next?esc(next.bill.name)+" · "+dateLabel(next.date):"none due soon",next?"var(--orange)":"var(--dim)")
+    +'</div></div>';
   h+=upcomingBillsCard(3);
-  h+='<div class="card" style="padding:14px 16px;margin-top:14px;margin-bottom:14px"><div class="label" style="color:'+zb.color+'">Zero-based check</div><div style="font-size:17px;font-weight:950;margin-top:6px;color:'+zb.color+'">'+zb.label+'</div><div style="font-size:12.5px;color:var(--dim);line-height:1.45;margin-top:4px">'+zb.sub+'</div></div>';
-  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px">'
-    +dashMini("Bills locked",fmt(mb.fixed),"Protected",mb.fixed>0?"var(--teal)":"var(--dim)")
-    +dashMini("Flexible left",fmt(Math.max(0,mb.flexLeft)),"Spend pool",mb.flexLeft<0?"var(--red)":"var(--teal)")
-    +dashMini("Left to assign",fmt(mb.left),zb.state==="good"?"Done":"Needs job",zb.color)
-    +'</div>';
-  h+='<div style="display:flex;gap:10px;margin-top:4px"><button id="dashLog" class="btn btn-teal" style="flex:1">'+I.plus+' Log</button><button id="dashBills" class="btn btn-ghost" style="flex:1;color:var(--text)">Bills</button><button id="dashMove" class="btn btn-ghost" style="flex:1;color:var(--text)">Move</button></div>';
-  h+='<details style="margin-top:14px"><summary style="cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:800;padding:10px 2px">Show budget details</summary><div class="sheet-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">';
+  h+='<details style="margin-top:10px"><summary style="cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:850;padding:10px 2px">Show full budget details</summary><div class="sheet-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">';
   if(m){
+    h+=dashCard("Bills locked",fmt(mb.fixed),"Reserved before spending","var(--teal)");
+    h+=dashCard("Flexible left",fmt(Math.max(0,mb.flexLeft)),"Safe spending pool",mb.flexLeft<0?"var(--red)":"var(--teal)");
     h+=dashCard("Total income",fmt(mb.income),monthName(mk),"var(--text)");
     h+=dashCard("Savings assigned",fmt(mb.savings),mb.rate.toFixed(0)+"% savings rate","var(--purple)");
-    h+=dashCard("Fixed bills locked",fmt(mb.fixed),"Reserved for recurring bills","var(--teal)");
-    h+=dashCard("Flexible planned",fmt(mb.flexPlan),"Daily spending pool","var(--text)");
     h+=dashCard("Spent so far",fmt(t.actual),"of "+fmt(t.planned)+" planned",t.actual>t.planned?"var(--red)":"var(--text)");
     h+=dashCard("Left to assign",fmt(mb.left),zb.state==="good"?"every dollar has a job":"needs a job",zb.color);
   }
@@ -2067,13 +2188,19 @@ function moreRow(id,icon,label,sub){
     +'<span style="color:var(--dim);opacity:.5;display:flex">'+I.right+'</span></button>';
 }
 function moreHTML(){
-  return '<div class="narrow"><div style="font-weight:800;font-size:22px;letter-spacing:-.02em;margin-bottom:18px">More</div>'
+  const pulse=budgetPulse(M());
+  return '<div class="narrow"><div style="font-weight:900;font-size:23px;letter-spacing:-.025em;margin-bottom:6px">More</div><div style="font-size:13px;color:var(--dim);line-height:1.5;margin-bottom:16px">Daily budgeting stays simple. Power tools stay here.</div>'
+    +'<div class="card" style="padding:14px 15px;margin-bottom:16px"><div style="display:flex;align-items:center;gap:13px"><div class="pulse-ring" style="--pulse:'+pulse.score+'%"><span>'+pulse.score+'</span></div><div><div style="font-weight:950;font-size:15px;color:'+pulse.color+'">Budget pulse: '+pulse.label+'</div><div style="font-size:12.5px;color:var(--dim);line-height:1.45;margin-top:3px">'+pulse.sub+'</div></div></div></div>'
+    +'<div class="label" style="margin-bottom:9px;color:var(--teal)">Smart tools</div>'
+    +moreRow("mAfford",I.wallet,"Can I buy this?","Check a purchase before spending")
+    +moreRow("mWeekly",I.check,"Weekly reset","Review spending and set next week’s limit")
     +moreRow("mYear",I.chart,"Year view","Spending and savings across the year")
+    +'<div class="label" style="margin:16px 0 9px;color:var(--orange)">Advanced</div>'
     +moreRow("mDebt",I.card,"Debt Attack","Balances, payoff order, and next target")
-    +moreRow("mWeekly",I.check,"Weekly review","A quick look at the last 7 days")
+    +moreRow("mDemo",I.copy,"Load demo budget","Sample data for testing or screenshots")
     +'<div style="height:1px;background:var(--line);margin:10px 0 16px"></div>'
     +moreRow("mSettings",I.gear,"Settings","Income, paycheck, theme, backup")
-    +moreRow("mPrivacy",I.shield,"Privacy","How your data is stored")
+    +moreRow("mPrivacy",I.shield,"Privacy","No bank login. Data stays on device.")
     +'</div>';
 }
 function openPrivacy(){
@@ -2335,6 +2462,8 @@ function bind(){
   const wl=document.getElementById("weeklyLimit");if(wl)wl.onclick=openWeeklyLimit;
   const wd=document.getElementById("wDemo");if(wd)wd.onclick=loadDemoBudget;
   const dm=document.getElementById("dashMove");if(dm)dm.onclick=openMoveMoney;
+  const da=document.getElementById("dashAfford");if(da)da.onclick=openAffordCheck;
+  const sa=document.getElementById("spendAfford");if(sa)sa.onclick=openAffordCheck;
   const ps=document.getElementById("paycheckSettings");if(ps)ps.onclick=openPaycheckSettings;
   const spc=document.getElementById("setupPaycheck");if(spc)spc.onclick=openPaycheckSettings;
   const ts=document.getElementById("txnSearch");if(ts)ts.oninput=()=>{S.settings.txnSearch=ts.value;save();const pos=ts.selectionStart;render();setTimeout(()=>{const n=document.getElementById("txnSearch");if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(e){}}},0);};
@@ -2356,6 +2485,8 @@ function bind(){
   const md=document.getElementById("mDebt");if(md)md.onclick=()=>{tab="debt";render();};
   const mw=document.getElementById("mWeekly");if(mw)mw.onclick=()=>{tab="weekly";render();};
   const ms=document.getElementById("mSettings");if(ms)ms.onclick=openSettings;
+  const ma=document.getElementById("mAfford");if(ma)ma.onclick=openAffordCheck;
+  const mdemo=document.getElementById("mDemo");if(mdemo)mdemo.onclick=loadDemoBudget;
   const mp=document.getElementById("mPrivacy");if(mp)mp.onclick=openPrivacy;
 }
 
@@ -2381,6 +2512,151 @@ document.addEventListener("keydown",e=>{
     render();
   }
 });
+
+
+// ================= Robert's reimagined standout overrides =================
+function standoutMoney(m){return m?moneyBreakdown(m):{income:0,savings:0,fixed:0,flexPlan:0,flexSpent:0,flexLeft:0,other:0,planned:0,left:0,actual:0,rate:0};}
+function standoutSafeLine(m){
+  const sts=safeToSpend(m), mb=standoutMoney(m);
+  if(!m)return {amount:"—",big:"No plan",sub:"Build a budget to get your daily number.",color:"var(--dim)",score:0};
+  if(!sts)return {amount:"—",big:"Set flexible spending",sub:"Add flexible categories so Allotted can calculate today’s safe number.",color:"var(--orange)",score:22};
+  if(sts.over)return {amount:fmt(0),big:"Stop spending",sub:"You are over flexible spending by "+fmt(-sts.pool)+". Bill money is still locked.",color:"var(--red)",score:8};
+  const ratio=sts.flexPlanned>0?Math.max(0,Math.min(1,sts.pool/sts.flexPlanned)):0;
+  const hot=ratio<.18;
+  return {amount:fmt(sts.perDay),big:hot?"Tight day":"Good to spend",sub:fmt(sts.pool)+" left in flexible spending. Bills and savings are excluded.",color:hot?"var(--orange)":"var(--teal)",score:Math.round(hot?46:78)};
+}
+function topbarButton(id,icon){return '<button '+(id?'id="'+id+'" ':'')+'class="gear-v2">'+icon+'</button>';}
+function headerHTML(t,m){
+  return '<div class="header"><div class="topbar-v2">'
+    +'<div class="brand-v2"><div style="display:flex">'+logoSVG(30,true)+'</div><div><div class="word">Allotted</div><div class="tag" style="font-size:10.5px;color:var(--dim);font-weight:800;letter-spacing:.08em;text-transform:uppercase">Private money command</div></div></div>'
+    +'<div style="display:flex;align-items:center;gap:8px"><div class="month-pill"><button data-mnav="-1">'+I.left+'</button><button id="mpick">'+monthName(mk)+'</button><button data-mnav="1">'+I.right+'</button></div>'
+    +(tab==="dashboard"?topbarButton("settingsBtn",I.gear):'<div style="width:38px"></div>')+'</div></div></div>';
+}
+function welcomeHTML(){
+  return '<div class="narrow"><div class="daily-command" style="margin-top:8px;text-align:left">'
+    +'<div class="command-top"><div class="safe-stack"><div class="eyebrow" style="color:var(--teal)">Allotted</div><div class="safe-amount" style="font-size:50px">Spend with a stoplight.</div><div class="safe-copy">A private budgeting app that locks bills first, then gives you a clean daily spending number. No bank login. No ads. No tracking.</div></div><div class="pulse-dial" style="--pulse:82%"><div><b>✓</b><span>Private</span></div></div></div>'
+    +'<div class="metric-ribbon"><div class="ribbon-cell"><div class="k">Lock</div><div class="v" style="color:var(--teal)">Bills</div><div class="s">never spend by accident</div></div><div class="ribbon-cell"><div class="k">Check</div><div class="v">Today</div><div class="s">safe-to-spend number</div></div><div class="ribbon-cell"><div class="k">Decide</div><div class="v" style="color:var(--gold)">Buy?</div><div class="s">purchase check before swiping</div></div></div>'
+    +'<div class="command-actions"><button id="wOnboard" class="btn btn-teal primary-wide">Build my budget</button><button id="wDemo" class="btn btn-ghost" style="color:var(--text)">Try demo</button><button id="wTemplate" class="btn btn-ghost" style="color:var(--text)">Use template</button></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px"><button id="wBlank" class="btn btn-ghost" style="color:var(--dim)">Manual start</button><button id="wImport" class="btn btn-ghost" style="color:var(--dim)">Restore backup</button></div>'
+    +'</div></div>';
+}
+function briefBoardHTML(m){
+  const safe=standoutSafeLine(m), mb=standoutMoney(m), z=zeroStatus(m);
+  const items=[];
+  items.push({c:safe.color,t:safe.big,s:safe.sub});
+  const next=firstUpcomingBill();
+  if(next)items.push({c:"var(--orange)",t:"Next bill: "+esc(next.bill.name),s:dateLabel(next.date)+" · "+fmt(next.bill.amount||0)+" protected from safe-to-spend"});
+  else items.push({c:"var(--teal)",t:"No bills due soon",s:"Your bill runway is clear for now."});
+  items.push({c:z.color,t:z.label,s:z.sub});
+  return '<div class="brief-board">'+items.slice(0,3).map(x=>'<div class="brief-card"><div class="brief-dot" style="background:'+x.c+';box-shadow:0 0 0 5px '+(x.c.indexOf('red')>-1?'var(--redsoft)':x.c.indexOf('orange')>-1?'var(--orangesoft)':'var(--tealsoft)')+'"></div><div><div class="brief-title">'+x.t+'</div><div class="brief-sub">'+x.s+'</div></div></div>').join('')+'</div>';
+}
+function miniRunwayHTML(limit){
+  const today=todayLocal(); const end=new Date(today); end.setDate(end.getDate()+31);
+  const occ=billOccurrencesBetween(today,end).filter(o=>!o.paid).slice(0,limit||4);
+  if(!occ.length)return '<div class="empty-v2">No bills due soon.<br>Bill money still stays locked when you add recurring bills.</div>';
+  return '<div class="bill-runway">'+occ.map(o=>{
+    const d=dayDiff(today,o.date), cls=d<=0?'danger-chip':d<=3?'caution-chip':'';
+    return '<div class="runway-row" data-billedit="'+o.bill.id+'"><div class="runway-date"><span>'+o.date.toLocaleDateString('en-US',{month:'short'})+'</span><b>'+o.date.getDate()+'</b></div><div><div class="runway-name">'+esc(o.bill.name)+'</div><div class="runway-meta">'+(d===0?'Due today':d<0?('Overdue by '+Math.abs(d)+'d'):'Due in '+d+'d')+(o.bill.autopay?' · autopay':'')+'</div></div><div style="text-align:right"><div class="amount-pill">'+fmt(o.bill.amount||0)+'</div><div class="status-chip '+cls+'" style="margin-top:5px">unpaid</div></div></div>';
+  }).join('')+'</div>';
+}
+function moneyMapHTML(m){
+  const mb=standoutMoney(m), z=zeroStatus(m);
+  return '<div class="money-map">'
+    +'<div class="map-piece"><div class="k">Income</div><div class="v">'+fmt(mb.income)+'</div></div>'
+    +'<div class="map-piece"><div class="k">Bill vault</div><div class="v" style="color:var(--teal)">'+fmt(mb.fixed)+'</div></div>'
+    +'<div class="map-piece"><div class="k">Spend pool</div><div class="v" style="color:'+(mb.flexLeft<0?'var(--red)':'var(--text)')+'">'+fmt(Math.max(0,mb.flexLeft))+'</div></div>'
+    +'<div class="map-piece"><div class="k">Unassigned</div><div class="v" style="color:'+z.color+'">'+fmt(mb.left)+'</div></div>'
+    +'</div>';
+}
+function dashboardHTML(m,t){
+  if(S.settings.budgetMode==="paycheck")return '<div class="narrow"><div class="mode-tabs-v2"><button data-budgetmode="monthly">Today</button><button data-budgetmode="paycheck" class="on">Paycheck</button></div>'+paycheckPlannerHTML()+'</div>';
+  const safe=standoutSafeLine(m), pulse=budgetPulse(m), mb=standoutMoney(m);
+  let h='<div class="narrow"><div class="mode-tabs-v2"><button data-budgetmode="monthly" class="on">Today</button><button data-budgetmode="paycheck">Paycheck</button></div>';
+  h+='<div class="daily-command"><div class="command-top"><div class="safe-stack"><div class="eyebrow">Safe to spend today</div><div class="safe-amount" style="color:'+safe.color+'">'+safe.amount+'</div><div class="safe-copy">'+safe.sub+'</div></div><div class="pulse-dial" style="--pulse:'+pulse.score+'%"><div><b>'+pulse.score+'</b><span>Pulse</span></div></div></div>';
+  h+='<div class="command-actions"><button id="dashLog" class="btn btn-teal primary-wide">'+I.plus+' Log spending</button><button id="dashAfford" class="btn btn-ghost" style="color:var(--text)">Can I buy?</button><button id="dashBills" class="btn btn-ghost" style="color:var(--text)">Bill runway</button></div>';
+  h+='<div class="metric-ribbon"><div class="ribbon-cell"><div class="k">Bill vault</div><div class="v" style="color:var(--teal)">'+fmt(mb.fixed)+'</div><div class="s">locked first</div></div><div class="ribbon-cell"><div class="k">Flexible left</div><div class="v" style="color:'+(mb.flexLeft<0?'var(--red)':'var(--text)')+'">'+fmt(Math.max(0,mb.flexLeft))+'</div><div class="s">safe pool only</div></div><div class="ribbon-cell"><div class="k">Left to assign</div><div class="v" style="color:'+zeroStatus(m).color+'">'+fmt(mb.left)+'</div><div class="s">zero-based check</div></div></div></div>';
+  h+=briefBoardHTML(m);
+  h+='<div class="section-title-v2"><div><h2>Bill runway</h2><p>What can hit before you get comfortable spending.</p></div><button data-go-bills class="btn btn-ghost" style="width:auto;padding:10px 12px;color:var(--teal)">View all</button></div><div class="card">'+miniRunwayHTML(4)+'</div>';
+  h+='<details style="margin-top:14px"><summary style="cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:900;padding:10px 2px">Open money map</summary>'+moneyMapHTML(m)+'</details>';
+  return h+'</div>';
+}
+function budgetLaneHTML(g){
+  const gp=g.items.reduce((a,i)=>a+(i.planned||0),0),ga=g.items.reduce((a,i)=>a+(i.actual||0),0);
+  const rows=g.items.map(i=>{
+    const avail=(i.planned||0)+rolloverCarry(mk,g.name,i.name)-(i.actual||0); const pct=(i.planned||0)>0?Math.min(100,(i.actual||0)/(i.planned||1)*100):0;
+    return '<div class="allocation-row" data-edit="item:'+g.id+':'+i.id+'"><div style="min-width:0"><div class="row-title">'+esc(i.name)+'</div><div class="row-sub">'+fmt(i.actual||0)+' spent · '+fmt(avail)+' left '+(itemBucket(i)===G_FLEX?'· '+categoryHealth(i).label:'')+'</div><div class="minibar"><div style="width:'+pct+'%;background:'+(avail<0?'var(--red)':itemBucket(i)===G_FIXED?'var(--teal)':'var(--orange)')+'"></div></div></div><div class="amount-pill">'+fmt(i.planned||0)+'</div></div>';
+  }).join('')||'<div class="empty-v2" style="padding:20px 12px">Nothing here yet.</div>';
+  return '<div class="allocation-lane"><div class="lane-head"><div><div class="lane-title">'+esc(g.name)+'</div><div class="row-sub">'+(g.name===G_FIXED?'Protected money':g.name===G_FLEX?'Daily spend pool':'Extra assignments')+'</div></div><div class="lane-total">'+fmt(ga)+' / '+fmt(gp)+'</div></div>'+rows+'<button class="addline" data-add="item:'+g.id+'">'+I.plus+' Add line</button></div>';
+}
+function budgetHTML(m,t){
+  const z=zeroStatus(m);
+  let h='<div class="narrow">';
+  if(monthUntouched(m)&&Object.keys(S.months).length===1)h+='<button id="startOver" class="addline" style="margin:0 0 12px;padding:8px 12px;border-radius:14px;background:var(--inset);border:1px solid var(--line);color:var(--dim)">'+I.left+' Start over</button>';
+  h+='<div class="daily-command" style="padding:18px"><div class="eyebrow">Allocation board</div><div style="font-size:26px;font-weight:950;margin-top:8px;color:'+z.color+'">'+z.label+'</div><div class="safe-copy">'+z.sub+'</div>'+moneyMapHTML(m)+'<div class="command-actions" style="grid-template-columns:1fr 1fr"><button id="budgetTemplate" class="btn btn-teal">Templates</button><button id="moveMoney" class="btn btn-ghost" style="color:var(--text)">Move money</button></div></div>';
+  h+=warningCards('budget',m,t);
+  h+='<div class="allocation-board">';
+  const ordered=[G_FIXED,G_FLEX,'Savings',G_OTHER];
+  const savingsRows=(m.savings||[]).map(s=>'<div class="allocation-row" data-edit="savings:'+s.id+'"><div><div class="row-title">'+esc(s.name)+'</div><div class="row-sub">Goal or transfer bucket</div></div><div class="amount-pill">'+fmt(s.amount||0)+'</div></div>').join('')||'<div class="empty-v2" style="padding:20px 12px">No savings goals yet.</div>';
+  ordered.forEach(name=>{
+    if(name==='Savings')h+='<div class="allocation-lane"><div class="lane-head"><div><div class="lane-title">Savings</div><div class="row-sub">Money you do not spend</div></div><div class="lane-total">'+fmt((m.savings||[]).reduce((a,x)=>a+(x.amount||0),0))+'</div></div>'+savingsRows+'<button class="addline" data-add="savings">'+I.plus+' Add savings</button></div>';
+    else {const g=m.groups.find(x=>x.name===name); if(g)h+=budgetLaneHTML(g);}
+  });
+  const extras=m.groups.filter(g=>!ordered.includes(g.name)); extras.forEach(g=>h+=budgetLaneHTML(g));
+  h+='</div><button id="addGroup" class="btn btn-ghost" style="margin-top:12px;max-width:260px;color:var(--text)">'+I.plus+' Add custom group</button></div>';
+  return h;
+}
+function trackHTML(m,t){
+  const safe=standoutSafeLine(m);
+  let h='<div class="narrow"><div class="decision-card"><div class="eyebrow">Spend cockpit</div><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:8px"><div><div style="font-size:38px;font-weight:950;letter-spacing:-.055em;color:'+safe.color+'">'+safe.amount+'</div><div style="font-size:13px;color:var(--dim);line-height:1.45">'+safe.sub+'</div></div><button id="logTxn" class="btn btn-teal" style="width:auto;padding:13px 16px;white-space:nowrap">'+I.plus+' Log</button></div></div>';
+  h+=warningCards('track',m,t);
+  h+='<div class="command-actions" style="grid-template-columns:1fr 1fr;margin-bottom:12px"><button id="spendAfford" class="btn btn-ghost" style="color:var(--text)">Can I buy this?</button><button id="dashMove" class="btn btn-ghost" style="color:var(--text)">Move money</button></div>';
+  h+=recentTransactionsHTML(m);
+  h+='<div class="section-title-v2"><div><h2>Spend lanes</h2><p>Flexible categories show health first.</p></div></div><div class="allocation-board">';
+  (m.groups||[]).forEach(g=>{if(g.items&&g.items.length)h+=budgetLaneHTML(g);});
+  h+='</div></div>';
+  return h;
+}
+function billRunwayFullHTML(bills,paid){
+  if(!bills.length)return '<div class="empty-v2">'+(paid?'No paid bills yet.':'No upcoming bills. Add rent, subscriptions, or anything due monthly.')+'</div>';
+  return '<div class="card"><div class="bill-runway">'+bills.map(b=>{
+    const st=billStatusForMonth(b,mk); const due=st.due; const chip=paid?'paid-chip':(st.state==='overdue'?'danger-chip':(st.state==='soon'||st.state==='week'?'caution-chip':''));
+    return '<div class="runway-row" data-billedit="'+b.id+'"><div class="runway-date"><span>'+due.toLocaleDateString('en-US',{month:'short'})+'</span><b>'+due.getDate()+'</b></div><div><div class="runway-name">'+esc(b.name)+(b.autopay?' <span class="status-chip paid-chip">auto</span>':'')+'</div><div class="runway-meta">'+st.label+'</div></div><div style="text-align:right"><div class="amount-pill">'+fmt(b.amount||0)+'</div><button data-billpaid="'+b.id+'" class="status-chip '+chip+'" style="border:0;margin-top:5px">'+(paid?'undo':'mark paid')+'</button></div></div>';
+  }).join('')+'</div></div>';
+}
+function billsHTML(){
+  const bills=S.bills||[], mb=standoutMoney(M()), bb=billsBeforePayday();
+  const paid=bills.filter(b=>billStatusForMonth(b,mk).state==='paid');
+  const unpaid=bills.filter(b=>billStatusForMonth(b,mk).state!=='paid').sort((a,b)=>billStatusForMonth(a,mk).due-billStatusForMonth(b,mk).due);
+  const view=S.settings.billsView==='paid'?'paid':'upcoming';
+  let h='<div class="narrow"><div class="daily-command" style="padding:18px"><div class="eyebrow">Bill vault</div><div style="font-size:32px;font-weight:950;color:var(--teal);margin-top:6px">'+fmt(mb.fixed)+'</div><div class="safe-copy">This money is protected before safe-to-spend is calculated.</div><div class="metric-ribbon"><div class="ribbon-cell"><div class="k">Unpaid</div><div class="v">'+fmt(unpaid.reduce((s,b)=>s+(b.amount||0),0))+'</div><div class="s">this month</div></div><div class="ribbon-cell"><div class="k">Before payday</div><div class="v">'+fmt(bb?bb.unpaidTotal:0)+'</div><div class="s">next check risk</div></div><div class="ribbon-cell"><div class="k">Count</div><div class="v">'+unpaid.length+'</div><div class="s">open bills</div></div></div><button id="addBill" class="btn btn-teal" style="margin-top:12px">'+I.plus+' Add bill</button></div>';
+  h+=warningCards('bills',M(),totals(M()));
+  h+='<div class="mode-tabs-v2"><button data-billsview="upcoming" class="'+(view==='upcoming'?'on':'')+'">Upcoming</button><button data-billsview="paid" class="'+(view==='paid'?'on':'')+'">Paid</button></div>';
+  h+=view==='paid'?billRunwayFullHTML(paid,true):billRunwayFullHTML(unpaid,false);
+  return h+'</div>';
+}
+function paycheckPlannerHTML(){
+  const auto=safeUntilPayday(), has=S.settings.paycheckMode&&S.settings.nextPayday&&S.settings.payAmount;
+  let h='<div class="daily-command"><div class="command-top"><div><div class="eyebrow">Paycheck runway</div><div class="safe-amount" style="font-size:48px">'+(auto&&!auto.needPay?fmt(auto.perDay):'—')+'</div><div class="safe-copy">Automatic view based on payday, bills due before then, savings, and flexible spending already logged.</div></div><div class="pulse-dial" style="--pulse:'+(auto&&auto.over?18:has?72:25)+'%"><div><b>'+(auto&&auto.over?'!':has?'✓':'?')+'</b><span>Pay</span></div></div></div><div class="command-actions"><button id="paycheckSettings" class="btn btn-teal primary-wide">Set payday</button><button id="addPaycheck" class="btn btn-ghost" style="color:var(--text)">Manual plan</button></div>';
+  if(auto&&!auto.needPay){h+='<div class="metric-ribbon"><div class="ribbon-cell"><div class="k">Pay amount</div><div class="v">'+fmt(auto.pay)+'</div><div class="s">next check</div></div><div class="ribbon-cell"><div class="k">Bills before</div><div class="v">'+fmt(auto.unpaidTotal)+'</div><div class="s">protected</div></div><div class="ribbon-cell"><div class="k">Left after</div><div class="v" style="color:'+(auto.left<0?'var(--red)':'var(--teal)')+'">'+fmt(auto.left)+'</div><div class="s">until payday</div></div></div>';}
+  else h+='<div class="empty-v2" style="margin-top:12px">Add pay amount and next payday to unlock automatic paycheck planning.</div>';
+  h+='</div>';
+  const pcs=S.paychecks||[]; if(pcs.length)h+='<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:900;padding:10px 2px">Advanced manual paycheck assignments</summary>'+pcs.map(paycheckCardHTML).join('')+'</details>';
+  h+='<div class="section-title-v2"><div><h2>Bills before payday</h2><p>Auto-detected from due dates.</p></div></div><div class="card">'+miniRunwayHTML(5)+'</div>';
+  return h;
+}
+function moreHTML(){
+  const pulse=budgetPulse(M());
+  return '<div class="narrow"><div class="daily-command" style="padding:18px"><div class="eyebrow">Toolbox</div><div style="display:flex;align-items:center;gap:14px;margin-top:10px"><div class="pulse-dial" style="--pulse:'+pulse.score+'%"><div><b>'+pulse.score+'</b><span>Pulse</span></div></div><div><div style="font-size:24px;font-weight:950;color:'+pulse.color+'">'+pulse.label+'</div><div class="safe-copy">'+pulse.sub+'</div></div></div></div><div class="section-title-v2"><div><h2>Smart tools</h2><p>Useful without turning into a bank-sync app.</p></div></div><div class="tool-grid-v2">'
+    +toolTile('mAfford',I.wallet,'Can I buy this?','Check a purchase against safe money')
+    +toolTile('mWeekly',I.check,'Weekly reset','Review spending and set a limit')
+    +toolTile('mYear',I.chart,'Year view','See the long-term picture')
+    +toolTile('mDebt',I.card,'Debt Attack','Pick the next payoff target')
+    +toolTile('mDemo',I.copy,'Demo budget','Load sample data for testing')
+    +toolTile('mSettings',I.gear,'Settings','Income, theme, backup, reset')
+    +toolTile('mPrivacy',I.shield,'Privacy promise','No bank login. Local-first.')
+    +'</div></div>';
+}
+function toolTile(id,icon,title,sub){return '<button id="'+id+'" class="tool-tile"><span class="ico">'+icon+'</span><span><b>'+title+'</b><span>'+sub+'</span></span><span style="margin-left:auto;color:var(--dim)">'+I.right+'</span></button>';}
 
 // ================= go =================
 load();
