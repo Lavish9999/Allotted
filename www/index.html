@@ -114,15 +114,20 @@ svg text{font-family:ui-monospace,'SF Mono',Menlo,monospace}
 .toggle-row input[type=checkbox]:checked{background:var(--teal)}
 .toggle-row input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:99px;background:#fff;transition:transform .18s}
 .toggle-row input[type=checkbox]:checked::after{transform:translateX(18px)}
-#intro{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(115% 75% at 50% 40%,rgba(45,212,191,.11),transparent 62%),var(--bg);transition:opacity .5s ease}
-#intro.out{opacity:0;pointer-events:none}
-#intro .il{opacity:0;transform:scale(.8);animation:iLogo .85s cubic-bezier(.2,.85,.25,1) .1s forwards}
-#intro .iw{font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--text);margin-top:20px;opacity:0;transform:translateY(10px);animation:iWord .7s cubic-bezier(.2,.8,.2,1) .5s forwards}
-#intro .it{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-top:13px;opacity:0;animation:iTag .6s ease .85s forwards}
-@keyframes iLogo{to{opacity:1;transform:none}}
+#intro{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(115% 75% at 50% 40%,rgba(45,212,191,.11),transparent 62%),var(--bg);transition:opacity .55s ease,transform .55s ease}
+#intro.out{opacity:0;transform:scale(1.06);pointer-events:none}
+#intro .ilogo{animation:iGlow 2.6s ease-in-out .6s infinite}
+#intro .ilogo line{stroke-dasharray:72;stroke-dashoffset:72;animation:iDraw .55s cubic-bezier(.45,.75,.3,1) forwards}
+#intro .ilogo .s1{animation-delay:.2s}
+#intro .ilogo .s2{animation-delay:.5s}
+#intro .ilogo .s3{stroke-dasharray:30;stroke-dashoffset:30;animation:iDraw .4s ease .95s forwards}
+#intro .iw{font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--text);margin-top:20px;opacity:0;transform:translateY(10px);animation:iWord .7s cubic-bezier(.2,.8,.2,1) 1.15s forwards}
+#intro .it{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-top:13px;opacity:0;animation:iTag .6s ease 1.5s forwards}
+@keyframes iDraw{to{stroke-dashoffset:0}}
+@keyframes iGlow{0%,100%{filter:drop-shadow(0 0 10px rgba(45,212,191,.35))}50%{filter:drop-shadow(0 0 22px rgba(45,212,191,.7))}}
 @keyframes iWord{to{opacity:1;transform:none}}
 @keyframes iTag{to{opacity:1}}
-@media (prefers-reduced-motion:reduce){#intro .il,#intro .iw,#intro .it{animation-duration:.01s;opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#intro .ilogo line{stroke-dashoffset:0;animation:none}#intro .ilogo{animation:none}#intro .iw,#intro .it{animation-duration:.01s;opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -1767,12 +1772,16 @@ render();
 function showIntro(){
   if(document.getElementById("intro"))return;
   const el=document.createElement("div");el.id="intro";
-  el.innerHTML='<div class="il">'+logoSVG(82,true)+'</div><div class="iw">Allotted</div><div class="it">Give every dollar a job</div>';
+  el.innerHTML='<svg class="ilogo" viewBox="0 0 100 100" width="90" height="90" aria-label="Allotted logo">'
+    +'<line class="s1" x1="50" y1="20" x2="25" y2="81" stroke="var(--teal)" stroke-width="11" stroke-linecap="round"/>'
+    +'<line class="s2" x1="50" y1="20" x2="75" y2="81" stroke="var(--orange)" stroke-width="11" stroke-linecap="round"/>'
+    +'<line class="s3" x1="37" y1="57" x2="63" y2="57" stroke="var(--teal)" stroke-width="9" stroke-linecap="round"/>'
+    +'</svg><div class="iw">Allotted</div><div class="it">Give every dollar a job</div>';
   document.body.appendChild(el);
   let done=false;
-  const hide=()=>{if(done)return;done=true;el.classList.add("out");setTimeout(()=>{if(el.parentNode)el.parentNode.removeChild(el);},520);};
+  const hide=()=>{if(done)return;done=true;el.classList.add("out");setTimeout(()=>{if(el.parentNode)el.parentNode.removeChild(el);},560);};
   el.addEventListener("click",hide);
-  setTimeout(hide,1950);
+  setTimeout(hide,2600);
 }
 showIntro();
 setTimeout(()=>{
