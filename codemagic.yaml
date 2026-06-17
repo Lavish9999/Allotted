@@ -42,6 +42,10 @@ workflows:
         script: |
           cd ios/App
           agvtool new-version -all $(($BUILD_NUMBER + 1))
+      - name: Set marketing version
+        script: |
+          cd ios/App
+          agvtool new-marketing-version 1.0.1
       - name: Build ipa
         script: |
           xcode-project build-ipa \
