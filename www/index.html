@@ -1366,6 +1366,19 @@ function dashboardHTML(m,t){
   const goal=parseFloat(S.settings.savingsGoal)||t.savings||0;
   h+=dashCard("Savings goal",fmt(goal),goal>0?"per month":"none set",goal>0?"var(--purple)":"var(--dim)");
   h+='</div>';
+  // debt payoff glance
+  const _owed=(S.debts||[]).reduce((s,d)=>s+(parseFloat(d.balance)||0),0);
+  if(_owed>0.5){
+    const plan=S.debtPlan||{strategy:"avalanche",extra:0};
+    const po=debtPayoff(plan.strategy,plan.extra);
+    const ord=debtOrder(plan.strategy);
+    const focus=ord.length?ord[0].name:"";
+    h+='<button id="dashDebt" class="card" style="width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;margin-bottom:0">'
+      +'<div style="min-width:0"><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Debt payoff</div>'
+      +'<div class="mono" style="font-size:22px;font-weight:800;color:var(--red);margin-top:3px">'+fmt(_owed)+'</div>'
+      +(focus?'<div style="font-size:11.5px;color:var(--dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Focus: '+esc(focus)+' \u00b7 '+(plan.strategy==="snowball"?"Snowball":"Avalanche")+'</div>':'')+'</div>'
+      +'<div style="text-align:right;flex-shrink:0"><div class="mono" style="font-size:18px;font-weight:800;color:var(--teal)">'+moTxt(po.months)+'</div><div style="font-size:10.5px;color:var(--dim);margin-top:2px">'+(isFinite(po.months)?"until debt-free":"add extra to plan")+'</div></div></button>';
+  }
   // quick actions
   h+='<div style="display:flex;gap:10px;margin-top:14px">'
     +'<button id="dashLog" class="btn btn-teal" style="flex:1">'+I.plus+' Log spending</button>'
@@ -1791,6 +1804,7 @@ function bind(){
   // --- v2: dashboard quick actions ---
   const dl=document.getElementById("dashLog");if(dl)dl.onclick=openTxnPicker;
   const dbv=document.getElementById("dashBills");if(dbv)dbv.onclick=()=>{tab="bills";render();};
+  const ddt=document.getElementById("dashDebt");if(ddt)ddt.onclick=()=>{tab="debt";render();};
   // --- v2: more menu ---
   const mb=document.getElementById("moreBack");if(mb)mb.onclick=()=>{tab="more";render();};
   const my=document.getElementById("mYear");if(my)my.onclick=()=>{tab="year";render();};
