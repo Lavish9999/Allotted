@@ -224,6 +224,7 @@ function migrate(){
   // schema v2: first-class bills/debts + settings (paycheck, onboarding)
   if(!Array.isArray(S.bills))S.bills=[];
   if(!Array.isArray(S.debts))S.debts=[];
+  if(!S.debtPlan||typeof S.debtPlan!=="object")S.debtPlan={strategy:"avalanche",extra:0};
   S.settings=(S.settings&&typeof S.settings==="object")?{...defaultSettings(),...S.settings}:defaultSettings();
   // anyone who already has budget data is an existing user — never show them onboarding
   if(Object.keys(S.months).length>0)S.settings.onboardingCompleted=true;
@@ -374,12 +375,12 @@ function render(){
   html+='</div>';
   if(!noData){
     const on=x=>tab===x?"on":"";
-    const moreActive=["more","debt","weekly","year"].includes(tab);
+    const moreActive=["more","bills","weekly","year"].includes(tab);
     html+='<div class="nav"><div class="nav-inner">'
     +'<button data-tab="dashboard" class="'+on("dashboard")+'">'+I.home+(tab==="dashboard"?'<span>Home</span>':'')+'</button>'
     +'<button data-tab="budget" class="'+on("budget")+'">'+I.cal+(tab==="budget"?'<span>Budget</span>':'')+'</button>'
     +'<button data-tab="track" class="'+on("track")+'">'+I.list+(tab==="track"?'<span>Track</span>':'')+'</button>'
-    +'<button data-tab="bills" class="'+on("bills")+'">'+I.receipt+(tab==="bills"?'<span>Bills</span>':'')+'</button>'
+    +'<button data-tab="debt" class="'+on("debt")+'">'+I.card+(tab==="debt"?'<span>Debt</span>':'')+'</button>'
     +'<button data-tab="more" class="'+(moreActive?"on":"")+'">'+I.grid+(moreActive?'<span>More</span>':'')+'</button>'
     +'</div></div>';
   }
@@ -1374,31 +1375,86 @@ function dashboardHTML(m,t){
 }
 
 // --- debts ---
+function debtList(){return (S.debts||[]).map(d=>({id:d.id,name:d.name,bal:parseFloat(d.balance)||0,apr:parseFloat(d.apr)||0,min:parseFloat(d.minPayment)||0})).filter(d=>d.bal>0.005);}
+function debtOrder(strategy,list){list=(list||debtList()).slice();return list.sort((a,b)=>strategy==="snowball"?((a.bal-b.bal)||(b.apr-a.apr)):((b.apr-a.apr)||(a.bal-b.bal)));}
+function debtPayoff(strategy,extra){
+  let list=debtList().map(d=>({bal:d.bal,apr:d.apr,min:d.min}));
+  if(!list.length)return {months:0,interest:0};
+  const budget=list.reduce((s,d)=>s+d.min,0)+(extra||0);
+  let months=0,interest=0,guard=0;
+  while(list.some(d=>d.bal>0.005)){
+    if(++guard>1200)return {months:Infinity,interest:Infinity};
+    months++;
+    list.forEach(d=>{if(d.bal>0.005){const i=d.bal*(d.apr/100/12);d.bal+=i;interest+=i;}});
+    let avail=budget;
+    list.forEach(d=>{if(d.bal>0.005&&avail>0){const pay=Math.min(d.min,d.bal,avail);d.bal-=pay;avail-=pay;}});
+    debtOrder(strategy,list.filter(d=>d.bal>0.005)).forEach(d=>{if(avail>0.005&&d.bal>0.005){const pay=Math.min(avail,d.bal);d.bal-=pay;avail-=pay;}});
+    if(budget < list.reduce((s,d)=>s+d.bal*(d.apr/100/12),0))return {months:Infinity,interest:Infinity};
+  }
+  return {months,interest:Math.round(interest)};
+}
+function moTxt(m){if(!isFinite(m))return "\u2014";if(m<=0)return "0 mo";if(m<12)return m+" mo";const y=Math.floor(m/12),mm=m%12;return y+"y"+(mm?" "+mm+"m":"");}
+function openExtraEdit(){
+  const plan=S.debtPlan||{strategy:"avalanche",extra:0};
+  sheet("Extra monthly payment",
+    '<div style="font-size:13px;color:var(--dim);line-height:1.55;margin-bottom:16px">On top of all your minimums, how much extra can you put toward debt each month? This is what powers your payoff plan.</div>'
+    +fieldHTML("ex_amt","Extra per month ($)",plan.extra||"","number","0")
+    +'<button id="exSave" class="btn btn-teal" style="margin-top:6px">Save</button>');
+  document.getElementById("exSave").onclick=()=>{S.debtPlan.extra=parseFloat(document.getElementById("ex_amt").value)||0;closeModal();commit();};
+}
 function debtsHTML(){
   const debts=S.debts||[];
-  let h='<div class="narrow">'+moreBackBtn("Debt tracker");
+  let h='<div class="narrow"><div style="font-weight:800;font-size:22px;letter-spacing:-.02em;margin-bottom:16px">Debt payoff</div>';
   if(!debts.length){
     h+='<div style="text-align:center;padding:40px 24px;color:var(--dim)">'
       +'<div style="opacity:.35;margin-bottom:14px;display:flex;justify-content:center">'+I.card+'</div>'
-      +'<div style="font-size:14px;line-height:1.6;margin-bottom:22px">No debts tracked yet.<br><span style="font-size:12.5px">Add credit cards or loans to see balances and minimum payments.</span></div>'
+      +'<div style="font-size:14px;line-height:1.6;margin-bottom:22px">No debts yet.<br><span style="font-size:12.5px">Add your credit cards and loans to build a payoff plan.</span></div>'
       +'<button id="addDebt" class="btn btn-teal" style="max-width:300px;margin:0 auto;display:block">'+I.plus+' Add a debt</button></div></div>';
     return h;
   }
+  const plan=S.debtPlan||{strategy:"avalanche",extra:0};
   const total=debts.reduce((s,d)=>s+(parseFloat(d.balance)||0),0);
   const mins=debts.reduce((s,d)=>s+(parseFloat(d.minPayment)||0),0);
-  h+='<div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;text-align:center">'
-    +'<div style="flex:1"><div class="mono" style="font-size:21px;font-weight:800;color:var(--red)">'+fmt(total)+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Total owed</div></div>'
-    +'<div style="flex:1"><div class="mono" style="font-size:21px;font-weight:800">'+fmt(mins)+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Monthly minimums</div></div></div>';
-  h+='<button id="addDebt" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Add a debt</button>';
+  h+='<div class="card" style="margin-bottom:12px;display:flex;justify-content:space-between;text-align:center">'
+    +'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800;color:var(--red)">'+fmt(total)+'</div><div style="font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-top:3px">Total owed</div></div>'
+    +'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800">'+fmt(mins)+'</div><div style="font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-top:3px">Min / month</div></div>'
+    +'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800;color:var(--teal)">'+fmt(mins+(plan.extra||0))+'</div><div style="font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-top:3px">Your pay</div></div></div>';
+  const av=debtPayoff("avalanche",plan.extra), sn=debtPayoff("snowball",plan.extra);
+  const opt=(key,title,desc,res)=>'<button data-strat="'+key+'" style="flex:1;text-align:left;background:'+(plan.strategy===key?"var(--tealsoft)":"var(--card)")+';border:1px solid '+(plan.strategy===key?"var(--tealb)":"var(--cardb)")+';border-radius:14px;padding:13px 14px;color:var(--text)">'
+    +'<div style="font-size:14px;font-weight:800;'+(plan.strategy===key?"color:var(--teal)":"")+'">'+title+'</div>'
+    +'<div style="font-size:10.5px;color:var(--dim);margin-top:3px;line-height:1.45">'+desc+'</div>'
+    +'<div class="mono" style="font-size:11px;margin-top:9px;font-weight:700">'+moTxt(res.months)+' \u00b7 '+fmt(res.interest)+' int.</div></button>';
+  h+='<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.09em;font-weight:700;margin:4px 2px 9px">Payoff method</div>';
+  h+='<div style="display:flex;gap:10px;margin-bottom:12px">'
+    +opt("avalanche","Avalanche","Highest rate first. Costs the least.",av)
+    +opt("snowball","Snowball","Smallest balance first. Fast wins.",sn)+'</div>';
+  h+='<button id="editExtra" class="btn btn-ghost" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:14px;color:var(--text);margin-bottom:12px;width:100%">'
+    +'<span style="font-weight:700;font-size:14px">Extra per month</span><span class="mono" style="font-weight:800;color:var(--teal)">'+fmt(plan.extra||0)+(plan.extra?'':' \u2014 add')+'</span></button>';
+  const chosen=plan.strategy==="snowball"?sn:av;
+  if(isFinite(chosen.months)){
+    h+='<div class="card" style="margin-bottom:14px;text-align:center;padding:20px">'
+      +'<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;font-weight:700">Debt-free in</div>'
+      +'<div class="mono" style="font-size:32px;font-weight:800;color:var(--teal);margin:6px 0 2px">'+moTxt(chosen.months)+'</div>'
+      +'<div style="font-size:12.5px;color:var(--dim)">paying '+fmt(mins+(plan.extra||0))+'/mo \u00b7 '+fmt(chosen.interest)+' total interest</div></div>';
+  } else {
+    h+='<div class="card" style="margin-bottom:14px;text-align:center;padding:18px;color:var(--dim);font-size:13px;line-height:1.5">Your payment barely covers the interest. Add an extra monthly amount above to start making real progress.</div>';
+  }
+  const ordered=debtOrder(plan.strategy);
+  const focusId=ordered.length?ordered[0].id:null;
+  h+='<button id="addDebt" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 14px">'+I.plus+' Add a debt</button>';
   h+='<div class="sheet-grid"><div class="gcard">';
-  debts.slice().sort((a,b)=>(parseFloat(a.balance)||0)-(parseFloat(b.balance)||0)).forEach(d=>{
-    const sub=[d.apr?(parseFloat(d.apr)).toFixed(2)+"% APR":"",d.minPayment?fmt(d.minPayment)+"/mo min":""].filter(Boolean).join(" · ");
+  ordered.forEach(d=>{
+    const sub=[d.apr?d.apr.toFixed(2)+"% APR":"",d.min?fmt(d.min)+"/mo min":""].filter(Boolean).join(" \u00b7 ");
+    const isFocus=d.id===focusId;
     h+='<div class="grow" data-debtedit="'+d.id+'">'
-      +'<div class="gn"><span>'+esc(d.name)+'</span>'+(sub?'<div class="gspent" style="color:var(--dim)">'+sub+'</div>':'')+'</div>'
-      +'<div class="gv" style="color:var(--red)">'+fmt(d.balance||0)+'</div></div>';
+      +'<div class="gn"><span>'+esc(d.name)+(isFocus?' <span style="color:var(--teal);font-size:9px;font-weight:800;border:1px solid var(--tealb);border-radius:99px;padding:1px 6px;letter-spacing:.04em;vertical-align:middle">FOCUS</span>':'')+'</span>'+(sub?'<div class="gspent" style="color:var(--dim)">'+sub+'</div>':'')+'</div>'
+      +'<div class="gv" style="color:var(--red)">'+fmt(d.bal)+'</div></div>';
+  });
+  (S.debts||[]).filter(d=>(parseFloat(d.balance)||0)<=0.005).forEach(d=>{
+    h+='<div class="grow" data-debtedit="'+d.id+'"><div class="gn"><span style="color:var(--dim)">'+esc(d.name)+' <span style="color:var(--teal);font-size:9px;font-weight:800">PAID OFF</span></span></div><div class="gv" style="color:var(--dim)">'+fmt(0)+'</div></div>';
   });
   h+='</div></div>';
-  h+='<div style="font-size:11.5px;color:var(--dim);text-align:center;margin-top:14px;line-height:1.5">Smallest balance first (snowball). Pay minimums on all, then put extra toward the top of the list.</div>';
+  h+='<div style="font-size:11.5px;color:var(--dim);text-align:center;margin-top:14px;line-height:1.55">Pay the minimum on everything, then throw your extra at the <b style="color:var(--text)">Focus</b> debt. When it\u2019s gone, roll its payment into the next.</div>';
   h+='</div>';
   return h;
 }
@@ -1470,7 +1526,7 @@ function moreRow(id,icon,label,sub){
 function moreHTML(){
   return '<div class="narrow"><div style="font-weight:800;font-size:22px;letter-spacing:-.02em;margin-bottom:18px">More</div>'
     +moreRow("mYear",I.chart,"Year view","Spending and savings across the year")
-    +moreRow("mDebt",I.card,"Debt tracker","Balances and minimum payments")
+    +moreRow("mBills",I.receipt,"Bills","Upcoming bills and due dates")
     +moreRow("mWeekly",I.check,"Weekly review","A quick look at the last 7 days")
     +'<div style="height:1px;background:var(--line);margin:10px 0 16px"></div>'
     +moreRow("mSettings",I.gear,"Settings","Income, paycheck, theme, backup")
@@ -1730,13 +1786,15 @@ function bind(){
   // --- v2: debts ---
   const adb=document.getElementById("addDebt");if(adb)adb.onclick=()=>openDebtEdit();
   document.querySelectorAll("[data-debtedit]").forEach(el=>el.onclick=()=>openDebtEdit(el.dataset.debtedit));
+  document.querySelectorAll("[data-strat]").forEach(el=>el.onclick=()=>{S.debtPlan=S.debtPlan||{strategy:"avalanche",extra:0};S.debtPlan.strategy=el.dataset.strat;commit();});
+  const ee=document.getElementById("editExtra");if(ee)ee.onclick=openExtraEdit;
   // --- v2: dashboard quick actions ---
   const dl=document.getElementById("dashLog");if(dl)dl.onclick=openTxnPicker;
   const dbv=document.getElementById("dashBills");if(dbv)dbv.onclick=()=>{tab="bills";render();};
   // --- v2: more menu ---
   const mb=document.getElementById("moreBack");if(mb)mb.onclick=()=>{tab="more";render();};
   const my=document.getElementById("mYear");if(my)my.onclick=()=>{tab="year";render();};
-  const md=document.getElementById("mDebt");if(md)md.onclick=()=>{tab="debt";render();};
+  const md=document.getElementById("mBills");if(md)md.onclick=()=>{tab="bills";render();};
   const mw=document.getElementById("mWeekly");if(mw)mw.onclick=()=>{tab="weekly";render();};
   const ms=document.getElementById("mSettings");if(ms)ms.onclick=openSettings;
   const mp=document.getElementById("mPrivacy");if(mp)mp.onclick=openPrivacy;
