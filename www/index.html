@@ -39,6 +39,7 @@
   --purple:#7C3AED; --purplesoft:rgba(124,58,237,.12);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html{background:var(--bg);min-height:100%}
 body{background:
     radial-gradient(135% 105% at 50% 22%, transparent 60%, var(--vignette) 100%),
     var(--bg);
@@ -199,8 +200,16 @@ function load(){
 }
 function applyTheme(){
   document.documentElement.setAttribute("data-theme",S.theme||"dark");
+  const bg=S.theme==="light"?"#F2F5F6":"#0B0E10";
   const mc=document.querySelector('meta[name="theme-color"]');
-  if(mc)mc.setAttribute("content",S.theme==="light"?"#F2F5F6":"#0B0E10");
+  if(mc)mc.setAttribute("content",bg);
+  try{
+    const sb=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.StatusBar;
+    if(sb){
+      sb.setStyle({style:S.theme==="light"?"LIGHT":"DARK"});
+      if(sb.setBackgroundColor)sb.setBackgroundColor({color:bg});
+    }
+  }catch(e){}
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 function commit(){save();render();}
