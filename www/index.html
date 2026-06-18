@@ -218,6 +218,12 @@ const M=()=>S.months[mk]||null;
 
 // keep an item's cached spent total in sync with its transaction list
 function recalcItem(i){i.actual=(i.txns||[]).reduce((s,x)=>s+(parseFloat(x.amount)||0),0);}
+// canonical spend group for a month (creates one if none exist)
+function spendGroup(m){if(!m.groups)m.groups=[];if(!m.groups.length)m.groups.push({id:nid(),name:"Spending",items:[]});return m.groups[0];}
+// every recurring budget line for a month = that month's bills, with its group id
+function recurringItems(m){const out=[];if(m&&m.groups)m.groups.forEach(g=>(g.items||[]).forEach(i=>{if(i.recurring)out.push({gid:g.id,item:i});}));return out;}
+function itemPaid(i){return (i.planned||0)>0&&(i.actual||0)>=(i.planned||0)-0.01;}
+function itemRemaining(i){return (i.planned||0)-(i.actual||0);}
 // upgrade older data: turn a bare "actual" number into a transaction list, seed v2 keys
 function migrate(){
   // schema v1 groundwork: ensure every item has a txn list
@@ -232,6 +238,24 @@ function migrate(){
   });
   // schema v2: first-class bills/debts + settings (paycheck, onboarding)
   if(!Array.isArray(S.bills))S.bills=[];
+  // schema v3: bills are now just recurring budget lines. Fold any legacy
+  // first-class bills into the budget so existing users keep their data.
+  if(S.bills.length){
+    const tk=S.months[mk]?mk:(Object.keys(S.months).sort().pop()||null);
+    const tm=tk&&S.months[tk];
+    if(tm){
+      const grp=spendGroup(tm);
+      const have=new Set();
+      tm.groups.forEach(g=>(g.items||[]).forEach(i=>{if(i.recurring)have.add((i.name||"").toLowerCase());}));
+      S.bills.forEach(b=>{
+        const nm=(b.name||"").trim();if(!nm)return;
+        if(have.has(nm.toLowerCase()))return;
+        grp.items.push({id:nid(),name:nm,planned:parseFloat(b.amount)||0,actual:0,txns:[],recurring:true,dueDay:b.dueDay||null});
+        have.add(nm.toLowerCase());
+      });
+    }
+    S.bills=[];
+  }
   if(!Array.isArray(S.debts))S.debts=[];
   if(!S.debtPlan||typeof S.debtPlan!=="object")S.debtPlan={strategy:"avalanche",extra:0};
   S.settings=(S.settings&&typeof S.settings==="object")?{...defaultSettings(),...S.settings}:defaultSettings();
@@ -521,14 +545,14 @@ function obFinish(){
     savings:[{id:nid(),name:"Savings",amount:goal}],
     groups:[]
   };
-  const billItems=cleanBills.map(b=>({id:nid(),name:b.name.trim(),planned:parseFloat(b.amount)||0,actual:0,txns:[],recurring:true}));
+  const billItems=cleanBills.map(b=>({id:nid(),name:b.name.trim(),planned:parseFloat(b.amount)||0,actual:0,txns:[],recurring:true,dueDay:Math.min(31,Math.max(1,parseInt(b.day)||1))}));
   if(billItems.length)month.groups.push({id:nid(),name:"Bills",items:billItems});
   const catItems=OB.cats.filter(c=>c&&c.trim()).map(c=>({id:nid(),name:c.trim(),planned:0,actual:0,txns:[],recurring:false}));
   month.groups.push({id:nid(),name:"Spending",items:catItems});
   month.groups.push({id:nid(),name:"Other",items:[]});
   S.months[mk]=month;
-  // first-class bills list (kept separate from envelopes, per product decision)
-  S.bills=cleanBills.map(b=>({id:nid(),name:b.name.trim(),amount:parseFloat(b.amount)||0,dueDay:Math.min(31,Math.max(1,parseInt(b.day)||1)),category:"",recurring:true,notes:"",paid:{}}));
+  // bills are recurring budget lines now — no separate store
+  S.bills=[];
   // settings
   S.settings.onboardingCompleted=true;
   S.settings.monthlyIncome=income;
@@ -1185,31 +1209,32 @@ function paydayInfo(){
   const start=prev<today?today:prev; // period we care about starts no earlier than today's paycheck window
   return {next,prev,daysUntil:Math.max(0,dayDiff(today,next)),periodStart:prev,today};
 }
-// every bill occurrence (paid or not) with a due date inside [from, to]
+// every recurring-line occurrence (paid or not) with a due date inside [from, to]
 function billOccurrencesBetween(from,to){
   const out=[];
-  (S.bills||[]).forEach(b=>{
-    // check the months spanned by the window
-    let y=from.getFullYear(),mo=from.getMonth();
-    const endY=to.getFullYear(),endMo=to.getMonth();
-    let guard=0;
-    while((y<endY||(y===endY&&mo<=endMo))&&guard<24){
-      const dd=clampDay(y,mo,b.dueDay);
-      const occ=new Date(y,mo,dd);
-      if(occ>=from&&occ<=to){
-        const key=y+"-"+String(mo+1).padStart(2,"0");
-        out.push({bill:b,date:occ,monthKey:key,paid:!!(b.paid&&b.paid[key])});
-      }
-      mo++; if(mo>11){mo=0;y++;} guard++;
+  let y=from.getFullYear(),mo=from.getMonth();
+  const endY=to.getFullYear(),endMo=to.getMonth();
+  let guard=0;
+  while((y<endY||(y===endY&&mo<=endMo))&&guard<24){
+    const key=y+"-"+String(mo+1).padStart(2,"0");
+    const mm=S.months[key];
+    if(mm&&mm.groups){
+      mm.groups.forEach(g=>(g.items||[]).forEach(i=>{
+        if(!i.recurring)return;
+        const dd=clampDay(y,mo,i.dueDay||1);
+        const occ=new Date(y,mo,dd);
+        if(occ>=from&&occ<=to) out.push({item:i,amount:i.planned||0,date:occ,monthKey:key,paid:itemPaid(i)});
+      }));
     }
-  });
+    mo++; if(mo>11){mo=0;y++;} guard++;
+  }
   return out.sort((a,b)=>a.date-b.date);
 }
 function billsBeforePayday(){
   const pi=paydayInfo(); if(!pi)return null;
   const occ=billOccurrencesBetween(pi.today,pi.next);
   const unpaid=occ.filter(o=>!o.paid);
-  return {occ,unpaid,total:occ.reduce((s,o)=>s+(o.bill.amount||0),0),unpaidTotal:unpaid.reduce((s,o)=>s+(o.bill.amount||0),0),info:pi};
+  return {occ,unpaid,total:occ.reduce((s,o)=>s+(o.amount||0),0),unpaidTotal:unpaid.reduce((s,o)=>s+(o.amount||0),0),info:pi};
 }
 // flexible (non-bill) spending logged within a date window, from budget envelopes
 function flexibleSpentBetween(from,to){
@@ -1251,39 +1276,40 @@ function safeUntilPayday(){
   return {pay,savingsForPeriod,billsTotal:bb.total,unpaidTotal:bb.unpaidTotal,spent,left,perDay:Math.max(0,left)/days,daysUntil:pi.daysUntil,info:pi,over:left<-0.5,bb};
 }
 
-// --- bill status ---
-function billStatus(b){
-  const today=todayLocal();
-  const y=today.getFullYear(),mo=today.getMonth();
-  const key=y+"-"+String(mo+1).padStart(2,"0");
-  const due=new Date(y,mo,clampDay(y,mo,b.dueDay));
-  const paid=!!(b.paid&&b.paid[key]);
-  if(paid)return {state:"paid",label:"Paid",color:"var(--teal)",bg:"var(--tealsoft)",due,key};
-  if(due<today)return {state:"overdue",label:"Overdue",color:"var(--red)",bg:"var(--redsoft)",due,key};
-  const dleft=dayDiff(today,due);
-  if(dleft<=7)return {state:"soon",label:dleft===0?"Due today":"Due in "+dleft+"d",color:"var(--orange)",bg:"var(--orangesoft)",due,key};
-  return {state:"upcoming",label:"Due "+dateLabel(due),color:"var(--dim)",bg:"var(--inset)",due,key};
+// --- bill status (a bill is a recurring budget line in the current month) ---
+function billStatus(i){
+  if(itemPaid(i))return {state:"paid",label:"Paid",color:"var(--teal)",bg:"var(--tealsoft)"};
+  const today=todayLocal();const y=today.getFullYear(),mo=today.getMonth();
+  if(i.dueDay){
+    const due=new Date(y,mo,clampDay(y,mo,i.dueDay));
+    if(due<today)return {state:"overdue",label:"Overdue",color:"var(--red)",bg:"var(--redsoft)",due};
+    const dleft=dayDiff(today,due);
+    if(dleft<=7)return {state:"soon",label:dleft===0?"Due today":"Due in "+dleft+"d",color:"var(--orange)",bg:"var(--orangesoft)",due};
+    return {state:"upcoming",label:"Due "+dateLabel(due),color:"var(--dim)",bg:"var(--inset)",due};
+  }
+  return {state:"unpaid",label:"Unpaid",color:"var(--orange)",bg:"var(--orangesoft)"};
 }
-function toggleBillPaid(id){
-  const b=(S.bills||[]).find(x=>x.id===id); if(!b)return;
-  const st=billStatus(b); b.paid=b.paid||{};
-  if(b.paid[st.key])delete b.paid[st.key]; else b.paid[st.key]=new Date().toISOString().slice(0,10);
-  commit();
+function unpayBill(gid,iid){
+  const m=M();if(!m)return;const g=m.groups.find(x=>x.id===gid);const i=g&&g.items.find(x=>x.id===iid);if(!i)return;
+  const idx=(i.txns||[]).map(x=>x.note).lastIndexOf("Paid in full");
+  if(idx>=0)i.txns.splice(idx,1); else i.txns=[];
+  recalcItem(i);commit();toast("Marked unpaid","var(--dim)");
 }
 
 function billsHTML(){
-  const bills=(S.bills||[]).slice().sort((a,b)=>(a.dueDay||0)-(b.dueDay||0));
+  const m=M();
+  const bills=recurringItems(m).sort((a,b)=>((a.item.dueDay||32)-(b.item.dueDay||32)));
   let h='<div class="narrow">';
   if(!bills.length){
     h+='<div style="text-align:center;padding:46px 24px;color:var(--dim)">'
       +'<div style="opacity:.35;margin-bottom:14px;display:flex;justify-content:center">'+I.receipt+'</div>'
-      +'<div style="font-size:14px;line-height:1.6;margin-bottom:22px">No bills yet.<br><span style="font-size:12.5px">Add your rent, car payment, subscriptions, or anything due monthly.</span></div>'
+      +'<div style="font-size:14px;line-height:1.6;margin-bottom:22px">No bills yet.<br><span style="font-size:12.5px">Add your rent, car payment, subscriptions, or anything due monthly. Bills are just recurring budget lines.</span></div>'
       +'<button id="addBill" class="btn btn-teal" style="max-width:300px;margin:0 auto;display:block">'+I.plus+' Add your first bill</button></div></div>';
     return h;
   }
-  const totalMonthly=bills.reduce((s,b)=>s+(b.amount||0),0);
-  const unpaid=bills.filter(b=>billStatus(b).state!=="paid");
-  const unpaidTotal=unpaid.reduce((s,b)=>s+(b.amount||0),0);
+  const totalMonthly=bills.reduce((s,b)=>s+(b.item.planned||0),0);
+  const unpaid=bills.filter(b=>!itemPaid(b.item));
+  const unpaidTotal=unpaid.reduce((s,b)=>s+Math.max(0,itemRemaining(b.item)),0);
   const bb=S.settings.paycheckMode?billsBeforePayday():null;
   h+='<div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;text-align:center">'
     +'<div style="flex:1"><div class="mono" style="font-size:20px;font-weight:800">'+fmt(totalMonthly)+'</div><div style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Monthly</div></div>'
@@ -1293,40 +1319,40 @@ function billsHTML(){
   h+='<button id="addBill" class="btn btn-teal" style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:0 auto 16px">'+I.plus+' Add a bill</button>';
   h+='<div class="sheet-grid"><div class="gcard">';
   bills.forEach(b=>{
-    const st=billStatus(b);
-    h+='<div class="grow" data-billedit="'+b.id+'" style="align-items:center">'
-      +'<div class="gn" style="display:flex;flex-direction:column;gap:3px"><span>'+esc(b.name)+(b.recurring?' <span style="color:var(--dim);opacity:.55;vertical-align:middle">'+I.repeat+'</span>':'')+'</span>'
+    const i=b.item;const st=billStatus(i);const ref=b.gid+":"+i.id;const paid=st.state==="paid";
+    h+='<div class="grow" data-billedit="'+ref+'" style="align-items:center">'
+      +'<div class="gn" style="display:flex;flex-direction:column;gap:3px"><span>'+esc(i.name)+' <span style="color:var(--dim);opacity:.55;vertical-align:middle">'+I.repeat+'</span></span>'
       +'<span style="display:inline-flex;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:'+st.color+';background:'+st.bg+';padding:2px 7px;border-radius:99px">'+st.label+'</span></span></div>'
       +'<div style="display:flex;align-items:center;gap:8px">'
-      +'<button data-billpaid="'+b.id+'" style="background:'+(st.state==="paid"?"var(--inset)":"var(--tealsoft)")+';border:1px solid '+(st.state==="paid"?"var(--line)":"var(--tealb)")+';color:'+(st.state==="paid"?"var(--dim)":"var(--teal)")+';font-weight:800;font-size:11px;padding:6px 10px;border-radius:9px;display:flex;align-items:center;gap:4px">'+(st.state==="paid"?"Undo":I.check+" Pay")+'</button>'
-      +'<div class="gv">'+fmt(b.amount||0)+'</div></div></div>';
+      +'<button data-'+(paid?"billunpay":"billpay")+'="'+ref+'" style="background:'+(paid?"var(--inset)":"var(--tealsoft)")+';border:1px solid '+(paid?"var(--line)":"var(--tealb)")+';color:'+(paid?"var(--dim)":"var(--teal)")+';font-weight:800;font-size:11px;padding:6px 10px;border-radius:9px;display:flex;align-items:center;gap:4px">'+(paid?"Undo":I.check+" Pay")+'</button>'
+      +'<div class="gv">'+fmt(i.planned||0)+'</div></div></div>';
   });
   h+='</div></div></div>';
   return h;
 }
-function openBillEdit(id){
-  const editing=(S.bills||[]).find(x=>x.id===id);
-  const b=editing||{name:"",amount:"",dueDay:"",recurring:true,notes:""};
+function openBillEdit(ref){
+  const m=M();if(!m)return;
+  let gid,iid,editing=null;
+  if(ref){const p=ref.split(":");gid=p[0];iid=p[1];const g=m.groups.find(x=>x.id===gid);editing=g&&g.items.find(x=>x.id===iid);}
+  const b=editing||{name:"",planned:"",dueDay:""};
   sheet(editing?"Edit bill":"Add a bill",
     fieldHTML("bl_name","Bill name",b.name,"text","e.g. Rent")
-    +'<div style="display:flex;gap:10px"><div style="flex:1.2">'+fieldHTML("bl_amt","Amount ($)",b.amount,"number","0")+'</div><div style="flex:1">'+fieldHTML("bl_day","Due day (1-31)",b.dueDay,"number","1")+'</div></div>'
-    +'<label class="toggle-row"><span>Repeats every month</span><input type="checkbox" id="bl_rec" '+(b.recurring!==false?"checked":"")+'></label>'
-    +fieldHTML("bl_note","Note (optional)",b.notes,"text","")
-    +'<button id="blSave" class="btn btn-teal" style="margin-top:6px;margin-bottom:10px">'+(editing?"Save changes":"Add bill")+'</button>'
+    +'<div style="display:flex;gap:10px"><div style="flex:1.2">'+fieldHTML("bl_amt","Amount ($)",editing?b.planned:"","number","0")+'</div><div style="flex:1">'+fieldHTML("bl_day","Due day (1-31)",b.dueDay||"","number","1")+'</div></div>'
+    +'<div style="color:var(--dim);font-size:11.5px;line-height:1.5;margin:-2px 0 12px">Bills are recurring budget lines — this also shows up under Spend on the Budget tab.</div>'
+    +'<button id="blSave" class="btn btn-teal" style="margin-bottom:10px">'+(editing?"Save changes":"Add bill")+'</button>'
     +(editing?'<button id="blDel" class="btn" style="background:var(--redsoft);border:1px solid rgba(248,113,113,.3);color:var(--red);font-size:13.5px">Delete bill</button>':''));
   document.getElementById("blSave").onclick=()=>{
     const name=document.getElementById("bl_name").value.trim();
     const amt=parseFloat(document.getElementById("bl_amt").value)||0;
-    const day=Math.min(31,Math.max(1,parseInt(document.getElementById("bl_day").value)||1));
+    const dayRaw=parseInt(document.getElementById("bl_day").value);
+    const day=isNaN(dayRaw)?null:Math.min(31,Math.max(1,dayRaw));
     if(!name){toast("Give the bill a name","var(--orange)");return;}
-    const rec=document.getElementById("bl_rec").checked;
-    const note=document.getElementById("bl_note").value||"";
-    if(editing){editing.name=name;editing.amount=amt;editing.dueDay=day;editing.recurring=rec;editing.notes=note;}
-    else{S.bills=S.bills||[];S.bills.push({id:nid(),name,amount:amt,dueDay:day,category:"",recurring:rec,notes:note,paid:{}});}
+    if(editing){editing.name=name;editing.planned=amt;editing.dueDay=day;editing.recurring=true;}
+    else{spendGroup(m).items.push({id:nid(),name,planned:amt,actual:0,txns:[],recurring:true,dueDay:day});}
     closeModal();commit();toast(editing?"Bill updated":"Bill added","var(--teal)");
   };
   const del=document.getElementById("blDel");
-  if(del)del.onclick=()=>{S.bills=(S.bills||[]).filter(x=>x.id!==editing.id);closeModal();commit();toast("Bill deleted","var(--orange)");};
+  if(del)del.onclick=()=>{const g=m.groups.find(x=>x.id===gid);if(g)g.items=g.items.filter(x=>x.id!==iid);closeModal();commit();toast("Bill deleted","var(--orange)");};
 }
 
 // --- dashboard ---
@@ -1393,8 +1419,9 @@ function dashboardHTML(m,t){
     return h;
   }
   // bills snapshot
-  const billsTot=(S.bills||[]).reduce((s,b)=>s+(b.amount||0),0);
-  h+=dashCard("Planned bills",fmt(billsTot),(S.bills||[]).length+" bill"+((S.bills||[]).length!==1?"s":""),"var(--text)");
+  const rec=recurringItems(m);
+  const billsTot=rec.reduce((s,b)=>s+(b.item.planned||0),0);
+  h+=dashCard("Planned bills",fmt(billsTot),rec.length+" bill"+(rec.length!==1?"s":""),"var(--text)");
   // savings progress
   const goal=parseFloat(S.settings.savingsGoal)||t.savings||0;
   h+=dashCard("Savings goal",fmt(goal),goal>0?"per month":"none set",goal>0?"var(--purple)":"var(--dim)");
@@ -1547,7 +1574,7 @@ function weeklyReviewHTML(){
     +'</div>';
   h+='<div class="gcard" style="margin-bottom:14px">'
     +'<div class="grow" style="cursor:default"><div class="gn">Bills due next week</div><div class="gv">'+dueNext.length+'</div></div>'
-    +(dueNext.length?dueNext.map(o=>'<div class="grow" style="cursor:default"><div class="gn" style="font-weight:500;color:var(--dim);font-size:13px">'+esc(o.bill.name)+' · '+dateLabel(o.date)+'</div><div class="gv" style="font-size:13px">'+fmt(o.bill.amount||0)+'</div></div>').join(""):'')
+    +(dueNext.length?dueNext.map(o=>'<div class="grow" style="cursor:default"><div class="gn" style="font-weight:500;color:var(--dim);font-size:13px">'+esc(o.item.name)+' · '+dateLabel(o.date)+'</div><div class="gv" style="font-size:13px">'+fmt(o.amount||0)+'</div></div>').join(""):'')
     +'</div>';
   // suggested action
   let action="You're on track — no action needed.";
@@ -1828,7 +1855,8 @@ function bind(){
   // --- v2: bills ---
   const ab=document.getElementById("addBill");if(ab)ab.onclick=()=>openBillEdit();
   document.querySelectorAll("[data-billedit]").forEach(el=>el.onclick=()=>openBillEdit(el.dataset.billedit));
-  document.querySelectorAll("[data-billpaid]").forEach(el=>el.onclick=e=>{e.stopPropagation();toggleBillPaid(el.dataset.billpaid);});
+  document.querySelectorAll("[data-billpay]").forEach(el=>el.onclick=e=>{e.stopPropagation();const p=el.dataset.billpay.split(":");markPaid(p[0],p[1]);});
+  document.querySelectorAll("[data-billunpay]").forEach(el=>el.onclick=e=>{e.stopPropagation();const p=el.dataset.billunpay.split(":");unpayBill(p[0],p[1]);});
   // --- v2: debts ---
   const adb=document.getElementById("addDebt");if(adb)adb.onclick=()=>openDebtEdit();
   document.querySelectorAll("[data-debtedit]").forEach(el=>el.onclick=()=>openDebtEdit(el.dataset.debtedit));
