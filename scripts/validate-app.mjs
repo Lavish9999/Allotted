@@ -45,7 +45,7 @@ if (html) {
     ["tab events", 'document.querySelectorAll("[data-tab]")'],
     ["file restore listener", ['fileInput").addEventListener("change"', '$("#fileInput").onchange', 'document.getElementById("fileInput").addEventListener("change"']],
     ["settings entry", ["function openSettings", "settingsBtn"]],
-    ["privacy access", ["function openPrivacy", "privacy.html"]],
+    ["privacy copy", ["function openPrivacy", "privacy.html", "Allotted uses device storage"]],
     ["storage failure flag", ["storageBroken", "broken"]],
     ["storage failure warning", ["storageWarning", "warning"]],
     ["safe startup save", ["if(!storageBroken)save();render();", "if(!broken)save();render();"]],
