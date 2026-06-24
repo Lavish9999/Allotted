@@ -1,97 +1,53 @@
 # Allotted App Logic Audit
 
-These are the highest-value fixes found during review of `www/index.html`.
+Status: addressed in the committed `www/index.html` source as of version `1.0.4`.
 
-The app currently lives in one large HTML file. These fixes should be made from a full checkout so the edited file can be run locally and smoke-tested before merging.
+The previous review found several high-risk issues caused by app logic living in one large file and then being patched during the build. The build-time patcher has been removed. The committed source is now the source of truth and `npm test` validates that directly.
 
-## P0 Bugs
+## Fixed Areas
 
-### 1. Paycheck safe-to-spend can overstate money left
+### Paycheck safe-to-spend
 
-Area: `safeUntilPayday()`, `billsBeforePayday()`, `billOccurrencesBetween()`
+`safeUntilPayday()` now calculates the full pay period from previous payday through next payday. It subtracts period bills, prorated savings, and flexible spending for the same period before calculating safe daily spending.
 
-`safeUntilPayday()` subtracts bills from `today` to next payday, but subtracts flexible spending from the whole pay period. Bills due or paid between the previous payday and today are ignored.
+### Future-month bill visibility
 
-Fix: calculate bill obligations for previous payday through next payday, while separately displaying unpaid upcoming bills from today through next payday.
+`billOccurrencesBetween()` can use the latest prior plan as a virtual source when a future month has not been created yet, so recurring bills do not disappear across month boundaries.
 
-### 2. Future-month bills can be invisible
+### Selected-month bill status
 
-Area: `billOccurrencesBetween()`, month carry-forward logic
+`billStatus(i, monthKey)` builds due dates from the selected budget month instead of always using the current real month.
 
-If a payday window crosses into a month that has not been created yet, recurring bills in that future month are skipped.
+### Restore behavior
 
-Fix: use the latest prior plan as a virtual source for recurring bills when `S.months[key]` is missing, or centralize month creation before bill/paycheck calculations.
+`applyBackup()` now confirms first, resets to a fresh default state, then adopts backup data. Restore semantics now match the UI copy: restore replaces the current app data.
 
-### 3. Bill status uses the real current month instead of selected month
+### Storage failure protection
 
-Area: `billStatus(i)`, `billsHTML()`
+`load()` records a storage failure instead of silently continuing, startup avoids saving over unreadable local data, and `save()` returns success/failure so the UI can warn users when storage is unavailable.
 
-Viewing a past or future month can show misleading due labels because due dates are built from today instead of selected `mk`.
+### Onboarding usefulness
 
-Fix: pass the selected month key into `billStatus`, build due date from `mk`, then compare that selected due date to today.
+Guided setup now creates a usable first month with income, savings, bills, and suggested category amounts. Paycheck mode is enabled automatically when payday or pay amount is provided.
 
-### 4. Restore says replace but actually merges
+### Month carry-forward
 
-Area: `applyBackup()`, file restore listener, `adoptState()`
+Month switching goes through `selectMonth()`, which carries forward a prior plan for future empty months and offers undo.
 
-Older or partial backups can leave existing local debts/settings/theme behind because restore merges into current state.
+### Bill due dates
 
-Fix: restore into a fresh default state first, validate shape, then assign all known top-level fields with defaults for missing keys.
+Undated recurring items display `Set due date` instead of being treated as due on the 1st for dated paycheck calculations.
 
-### 5. Corrupt local storage can be overwritten silently
+### Debt input safety
 
-Area: `load()`, `save()`, startup `load(); save(); render();`
+Debt balances, APRs, minimum payments, and extra payments are clamped to non-negative values before storage and payoff calculations.
 
-`load()` swallows parse errors, then startup immediately saves default state, which can destroy recoverable corrupt data.
+### Navigation
 
-Fix: make `load()` return an error state and avoid saving after parse failure. Make `save()` return success/failure and show a persistent warning when storage fails.
+Bills are now a primary tab. Debt payoff lives under More, which better matches everyday budgeting usage.
 
-## P1 Product/UX Fixes
+## Remaining Release Follow-ups
 
-### 6. Paycheck mode is not automatically enabled after onboarding
-
-Area: `obFinish()`
-
-Onboarding collects payday/pay amount, but users may never see paycheck planning.
-
-Fix: set `S.settings.paycheckMode = true` when payday or pay amount exists, or add an explicit final toggle.
-
-### 7. Onboarding creates zero-dollar categories
-
-Area: `obFinish()`, Budget/Home views
-
-Users can finish onboarding and land on a budget that still feels empty because categories start at `$0`.
-
-Fix: either distribute remaining income across categories as suggested amounts, or add a Home checklist card prompting users to set amounts.
-
-### 8. Month picker does not carry forward like arrow navigation
-
-Area: `openMonthPicker()`, `[data-mnav]`, keyboard navigation
-
-Arrow navigation carries forward a future plan, but picker/year-view navigation does not.
-
-Fix: add a `selectMonth(key, { carryForward })` helper and use it everywhere month selection occurs.
-
-### 9. Undated recurring lines become due on the 1st in calculations
-
-Area: `openAddEntry()`, `openEditEntry()`, `billOccurrencesBetween()`
-
-Recurring lines can be created without a due day, but calculations treat missing `dueDay` as `1`.
-
-Fix: require due day when recurring is enabled, show `Set due date`, or exclude undated recurring lines from dated paycheck math.
-
-### 10. Debt payoff accepts negative values
-
-Area: `openDebtEdit()`, `openExtraEdit()`, `debtPayoff()`
-
-Negative balances, APRs, minimums, or extra payments can produce bad payoff math.
-
-Fix: clamp stored debt fields to non-negative values and reject invalid input before saving.
-
-## P2 Follow-ups
-
-- Improve semimonthly pay schedules by storing two fixed pay days instead of adding 15 days repeatedly.
-- Use `payAmount || monthlyIncome / periodsPerMonth` as paycheck fallback.
-- Add stronger confirmation sheets for restore, clear transactions, clear month, and start over.
-- Surface debt due dates or remove the unused due-day field.
-- Move Bills into primary nav or show it conditionally when recurring bills exist.
+- Generate a real `package-lock.json` from an unrestricted npm registry connection and then switch Codemagic from `npm install` to `npm ci`.
+- Enable public hosting for `support.html` and `privacy.html` through the manual GitHub Pages setup in `docs/pages-setup.md`.
+- Test the TestFlight build on a real iPhone with fresh install, restore backup, bill pay/unpay, month carry-forward, debt payoff, and storage backup flows.
