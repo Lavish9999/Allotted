@@ -1,58 +1,95 @@
 # Allotted — iOS App Store build (no Mac required)
 
-This is a Capacitor wrapper around the Allotted web app. The whole pipeline runs in
-the cloud: push to GitHub → Codemagic builds & signs on a cloud Mac → lands in
-App Store Connect / TestFlight. You never open Xcode.
+This is a Capacitor wrapper around the Allotted web app. The pipeline runs in the cloud: push to GitHub, Codemagic builds and signs on a cloud Mac, then the build lands in App Store Connect / TestFlight.
 
 ## What's in here
-- `www/` — the actual app (index.html = Allotted, plus manifest + icons)
-- `resources/icon.png` — 1024×1024 master; Capacitor generates all icon sizes from this
-- `capacitor.config.json` — app name, bundle ID, dark background
-- `codemagic.yaml` — the cloud build + signing + upload pipeline
-- `package.json` — Capacitor dependencies
+
+- `www/` — the actual app (`index.html` = Allotted, plus manifest + icons)
+- `www/privacy.html` — privacy page for App Store privacy URL hosting
+- `www/support.html` — support page for App Store support URL hosting
+- `resources/icon.png` — 1024 x 1024 master app icon
+- `capacitor.config.json` — app name, bundle ID, and iOS background color
+- `codemagic.yaml` — cloud build, signing, and TestFlight upload pipeline
+- `scripts/validate-app.mjs` — lightweight app bundle validation used by `npm test`
+- `appstore-listing.md` — paste-ready App Store listing material
+
+## Local checks
+
+```bash
+npm install
+npm test
+```
+
+`npm test` verifies the local-first app shell, release support/privacy pages, manifest, icon, and key app markers before the iOS build runs.
 
 ## One-time setup
 
-### 1. Apple Developer Program — $99/year
-Enroll at https://developer.apple.com/programs/ (individual account is fine).
-Approval for individuals is usually 1–3 days.
+### 1. Apple Developer Program
 
-### 2. Create the app record (in a browser — no Mac)
-- Go to App Store Connect → My Apps → "+" → New App
-- Platform: iOS, Name: Allotted, Bundle ID: `com.twotonemotion.allotted`
-  (change this everywhere if you want a different one — it must be unique on the App Store)
-- After it's created, copy the numeric **Apple ID** shown on the app's page and paste it
-  into `codemagic.yaml` → `APP_STORE_APPLE_ID`
+Enroll at https://developer.apple.com/programs/ with an Individual or Organization account.
 
-### 3. App Store Connect API key (lets Codemagic sign + upload for you)
-- App Store Connect → Users and Access → Integrations → App Store Connect API
-- Generate a key with **App Manager** access; download the `.p8` (you only get one chance)
+### 2. Create the app record
+
+In App Store Connect:
+
+- Go to **My Apps → + → New App**
+- Platform: iOS
+- Name: Allotted
+- Bundle ID: `com.twotonemotion.allotted`
+
+Confirm this bundle ID before the first upload. Changing it later means updating the Apple app record, signing assets, `capacitor.config.json`, and `codemagic.yaml`.
+
+### 3. App Store Connect API key
+
+In App Store Connect:
+
+- Go to **Users and Access → Integrations → App Store Connect API**
+- Generate a key with App Manager access
+- Download the `.p8` file once
 - Note the Key ID and Issuer ID
 
-### 4. Codemagic
-- Sign up at https://codemagic.io with your GitHub account (free tier = 500 mac minutes/mo)
-- Add this repo
-- Teams/Integrations → App Store Connect → add the API key from step 3, name it `ASC_API_KEY`
-  (must match the name in codemagic.yaml)
-- Codemagic auto-manages the signing certificate + provisioning profile from that key
+### 4. Codemagic setup
 
-### 5. Push and build
-- Push this folder to a GitHub repo
-- In Codemagic, start the `ios-allotted` workflow
-- ~10–15 min later the build appears in TestFlight
+In Codemagic:
+
+- Sign in with GitHub and add this repo
+- Add the App Store Connect API key integration named `ASC_API_KEY`
+- Create or update the `appstore_signing` environment group
+- Add `CERTIFICATE_PRIVATE_KEY` to that group
+
+The workflow now checks for `CERTIFICATE_PRIVATE_KEY` before doing the slower iOS build steps, so signing problems fail early with a readable message.
+
+### 5. Public App Store URLs
+
+App Store Connect requires public HTTPS URLs for support and privacy. See `docs/pages-setup.md`.
+
+Recommended final URLs after hosting is enabled:
+
+- `https://lavish9999.github.io/Allotted/support.html`
+- `https://lavish9999.github.io/Allotted/privacy.html`
+
+### 6. Build
+
+In Codemagic, start the `ios-allotted` workflow. The workflow will:
+
+1. Check signing environment variables
+2. Install dependencies
+3. Run `npm test`
+4. Add/sync the iOS Capacitor project
+5. Generate app assets
+6. Build the IPA
+7. Submit the build to TestFlight
 
 ## Going live
-1. Test the TestFlight build on your iPhone (install TestFlight app, accept invite)
-2. In App Store Connect, fill the listing: screenshots (6.7" + 6.1" required),
-   description, keywords, support URL, privacy policy URL, and the Privacy "Nutrition Label"
-   (Allotted stores everything locally on-device → "Data Not Collected")
-3. Attach the build, set price (Free), submit for review
-4. Or flip `submit_to_app_store: true` in codemagic.yaml to auto-submit on next build
 
-## Notes / known gaps
-- The app currently loads fonts from Google's servers. It still works, but for a clean
-  offline experience (and to avoid any App Review "needs network for UI" flags), bundle the
-  Inter + Space Grotesk woff2 files into www/ and swap the @import for a local @font-face.
-- bundle ID `com.twotonemotion.allotted` is a placeholder tied to your IG handle — change it
-  in capacitor.config.json AND codemagic.yaml if you prefer something else, but do it before
-  the first build.
+1. Test the TestFlight build on your iPhone.
+2. Fill App Store Connect listing fields using `appstore-listing.md`.
+3. Use the public support/privacy URLs after hosting is enabled.
+4. Answer the App Privacy questionnaire as **Data Not Collected**.
+5. Attach the build, set price to Free, and submit for review.
+
+## Notes
+
+- Allotted is local-first: no accounts, no analytics, no ads, no bank connection, and no network calls in the app shell.
+- The Codemagic workflow still uses `npm install` because no lockfile is committed yet. Add `package-lock.json` and switch to `npm ci` once a lockfile can be generated from a normal npm registry connection.
+- `xcode: latest` is convenient before the first successful cloud build. After the first successful build, pin the exact Xcode version Codemagic used for more stable releases.
