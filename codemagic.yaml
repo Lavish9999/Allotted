@@ -14,13 +14,22 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
+      - name: Check required signing variables
+        script: |
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "Missing CERTIFICATE_PRIVATE_KEY in the appstore_signing environment group."
+            echo "Add a certificate private key in Codemagic before starting the iOS workflow."
+            exit 1
+          fi
       - name: Install npm dependencies
         script: npm install
+      - name: Validate app bundle
+        script: npm test
       - name: Add iOS platform
         script: |
           if [ ! -d "ios" ]; then npx cap add ios; fi
       - name: Generate app icons & splash
-        script: npx capacitor-assets generate --ios || true
+        script: npx capacitor-assets generate --ios
       - name: Sync web assets into iOS project
         script: npx cap sync ios
       - name: Skip export-compliance prompt
@@ -45,7 +54,8 @@ workflows:
       - name: Set marketing version
         script: |
           cd ios/App
-          agvtool new-marketing-version 1.0.1
+          APP_VERSION=$(node -p "require('../../package.json').version")
+          agvtool new-marketing-version "$APP_VERSION"
       - name: Build ipa
         script: |
           xcode-project build-ipa \

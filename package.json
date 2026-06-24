@@ -2,8 +2,10 @@
   "name": "allotted",
   "version": "1.0.0",
   "private": true,
-  "description": "Allotted — give every dollar a job.",
+  "description": "Allotted - give every dollar a job.",
   "scripts": {
+    "test": "node scripts/validate-app.mjs",
+    "validate": "node scripts/validate-app.mjs",
     "sync": "cap sync ios",
     "add:ios": "cap add ios",
     "assets": "capacitor-assets generate --ios",
