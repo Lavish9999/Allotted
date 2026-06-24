@@ -1,38 +1,40 @@
-# Allotted — iOS App Store build (no Mac required)
+# Allotted - iOS App Store build (no Mac required)
 
 This is a Capacitor wrapper around the Allotted web app. The pipeline runs in the cloud: push to GitHub, Codemagic builds and signs on a cloud Mac, then the build lands in App Store Connect / TestFlight.
 
 ## What's in here
 
-- `www/` — the actual app (`index.html` = Allotted, plus manifest + icons)
-- `www/privacy.html` — privacy page for App Store privacy URL hosting
-- `www/support.html` — support page for App Store support URL hosting
-- `resources/icon.png` — 1024 x 1024 master app icon
-- `capacitor.config.json` — app name, bundle ID, and iOS background color
-- `codemagic.yaml` — cloud build, signing, and TestFlight upload pipeline
-- `scripts/validate-app.mjs` — lightweight app bundle validation used by `npm test`
-- `appstore-listing.md` — paste-ready App Store listing material
+- `www/` - the actual app (`index.html` = Allotted, plus manifest + icons)
+- `www/privacy.html` - privacy page bundled with the app
+- `www/support.html` - support page bundled with the app
+- `privacy.html` - root privacy page for public App Store URL hosting
+- `support.html` - root support page for public App Store URL hosting
+- `resources/icon.png` - 1024 x 1024 master app icon
+- `capacitor.config.json` - app name, bundle ID, and iOS background color
+- `codemagic.yaml` - cloud build, signing, and TestFlight upload pipeline
+- `scripts/validate-app.mjs` - release validation used by `npm test`
+- `appstore-listing.md` - paste-ready App Store listing material
 
 ## Local checks
 
 ```bash
-npm install
+npm install --no-audit --no-fund
 npm test
 ```
 
-`npm test` verifies the local-first app shell, release support/privacy pages, manifest, icon, and key app markers before the iOS build runs.
+`npm test` validates the committed app source directly. It checks that the app remains local-first, has the expected storage/backup/data-safety protections, includes support/privacy pages, has a valid manifest, and does not rely on a build-time source patcher.
 
 ## One-time setup
 
 ### 1. Apple Developer Program
 
-Enroll at https://developer.apple.com/programs/ with an Individual or Organization account.
+Enroll in the Apple Developer Program with an Individual or Organization account.
 
 ### 2. Create the app record
 
 In App Store Connect:
 
-- Go to **My Apps → + → New App**
+- Go to **My Apps -> + -> New App**
 - Platform: iOS
 - Name: Allotted
 - Bundle ID: `com.twotonemotion.allotted`
@@ -43,7 +45,7 @@ Confirm this bundle ID before the first upload. Changing it later means updating
 
 In App Store Connect:
 
-- Go to **Users and Access → Integrations → App Store Connect API**
+- Go to **Users and Access -> Integrations -> App Store Connect API**
 - Generate a key with App Manager access
 - Download the `.p8` file once
 - Note the Key ID and Issuer ID
@@ -57,7 +59,7 @@ In Codemagic:
 - Create or update the `appstore_signing` environment group
 - Add `CERTIFICATE_PRIVATE_KEY` to that group
 
-The workflow now checks for `CERTIFICATE_PRIVATE_KEY` before doing the slower iOS build steps, so signing problems fail early with a readable message.
+The workflow checks for `CERTIFICATE_PRIVATE_KEY` before doing the slower iOS build steps, so signing problems fail early with a readable message.
 
 ### 5. Public App Store URLs
 
@@ -73,8 +75,8 @@ Recommended final URLs after hosting is enabled:
 In Codemagic, start the `ios-allotted` workflow. The workflow will:
 
 1. Check signing environment variables
-2. Install dependencies
-3. Run `npm test`
+2. Install pinned npm dependencies
+3. Validate the committed app source with `npm test`
 4. Add/sync the iOS Capacitor project
 5. Generate app assets
 6. Build the IPA
@@ -91,5 +93,6 @@ In Codemagic, start the `ios-allotted` workflow. The workflow will:
 ## Notes
 
 - Allotted is local-first: no accounts, no analytics, no ads, no bank connection, and no network calls in the app shell.
-- The Codemagic workflow still uses `npm install` because no lockfile is committed yet. Add `package-lock.json` and switch to `npm ci` once a lockfile can be generated from a normal npm registry connection.
-- `xcode: latest` is convenient before the first successful cloud build. After the first successful build, pin the exact Xcode version Codemagic used for more stable releases.
+- Capacitor dependency versions are pinned exactly in `package.json` for more stable cloud builds.
+- Codemagic is pinned to Xcode `26.4` to match the known working build environment.
+- The workflow still uses `npm install` because this workspace could not access the npm registry to generate a reliable lockfile. When a lockfile is generated from a normal npm registry connection, switch Codemagic to `npm ci`.
