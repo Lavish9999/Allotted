@@ -11,7 +11,7 @@ workflows:
       vars:
         BUNDLE_ID: "com.twotonemotion.allotted"
       node: 20.11.0
-      xcode: latest
+      xcode: 26.4
       cocoapods: default
     scripts:
       - name: Check required signing variables
@@ -22,8 +22,8 @@ workflows:
             exit 1
           fi
       - name: Install npm dependencies
-        script: npm install
-      - name: Apply app fixes and validate bundle
+        script: npm install --no-audit --no-fund
+      - name: Validate committed app source
         script: npm test
       - name: Add iOS platform
         script: |
