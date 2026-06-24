@@ -1,6 +1,6 @@
 {
   "name": "allotted",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "description": "Allotted - give every dollar a job.",
   "scripts": {
@@ -9,7 +9,7 @@
     "sync": "cap sync ios",
     "add:ios": "cap add ios",
     "assets": "capacitor-assets generate --ios",
-    "open:ios": "cap open ios"
+    "open:ios": "cap open:ios"
   },
   "dependencies": {
     "@capacitor/core": "7.0.0",
