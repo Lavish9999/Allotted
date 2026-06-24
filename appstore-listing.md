@@ -1,6 +1,6 @@
-# Allotted — App Store listing (paste-ready)
+# Allotted - App Store listing (paste-ready)
 
-All fields respect Apple's current character limits. Edit freely — these are starting points.
+All fields respect Apple's current character limits. Edit freely - these are starting points.
 
 ---
 
@@ -18,7 +18,7 @@ Allotted Budget Planner
 Give every dollar a job
 ```
 
-## Promotional Text  *(max 170 chars — editable anytime without re-review)*
+## Promotional Text  *(max 170 chars - editable anytime without re-review)*
 ```
 Plan your month before it happens. Assign every dollar a job, track spending, manage bills, and keep it all private on your device.
 ```
@@ -32,26 +32,26 @@ budget,budgeting,money,finance,zero based,envelope,expense,spending,tracker,savi
 ```
 Allotted is a simple, private way to plan your money one month at a time.
 
-The idea is straightforward: at the start of each month, give every dollar of income a job — bills, groceries, savings, debt, fun — until nothing is left unassigned. Then as the month goes on, log what you spend and watch each category draw down. You always know exactly where you stand.
+The idea is straightforward: at the start of each month, give every dollar of income a job - bills, groceries, savings, debt, fun - until nothing is left unassigned. Then as the month goes on, log what you spend and watch each category draw down. You always know exactly where you stand.
 
 No bank logins. No syncing. No accounts. Everything you enter stays on your device, and only your device.
 
 WHAT YOU CAN DO
-• Build a monthly zero-based budget
-• Assign income to savings, bills, debts, and spending categories
-• Track spending against your plan and see what is left in real time
-• Mark recurring bills paid and keep due dates visible
-• Compare debt payoff methods with avalanche and snowball planning
-• Carry last month's plan forward in one tap
-• Review spending across the week, month, and year
-• Back up and restore your data whenever you want
+- Build a monthly zero-based budget
+- Assign income to savings, bills, debts, and spending categories
+- Track spending against your plan and see what is left in real time
+- Mark recurring bills paid and keep due dates visible
+- Compare debt payoff methods with avalanche and snowball planning
+- Carry last month's plan forward when you move into a future month
+- Plan around paydays with safe-to-spend math
+- Back up and restore your data whenever you want
 
 WHY ALLOTTED
-• Private by design — your numbers never leave your phone
-• Fast and quiet — no ads, no notifications nagging you, no upsells
-• Built for clarity — a clean, focused view of your month
+- Private by design - your numbers never leave your phone
+- Fast and quiet - no ads, no notifications nagging you, no upsells
+- Built for clarity - a clean, focused view of your month
 
-Allotted doesn't connect to your bank or pull transactions automatically. That's the point: you decide where your money goes, on purpose, before you spend it.
+Allotted does not connect to your bank or pull transactions automatically. That is the point: you decide where your money goes, on purpose, before you spend it.
 ```
 
 ## Support URL  *(required)*
@@ -100,5 +100,5 @@ This is accurate because Allotted stores everything in local on-device storage, 
 Apple currently requires at least one screenshot set. The 6.9" iPhone size covers the most modern iPhones.
 
 - Required size: **6.9" iPhone** (1320 x 2868) or **6.7" iPhone** (1290 x 2796)
-- Suggested shots: welcome screen, Home/dashboard with data, Budget tab with a filled month, Track tab mid-month, Bills tab, Debt payoff screen, Year view
+- Suggested shots: welcome screen, Home dashboard with data, Plan tab with a filled month, Spend tab with transactions, Bills tab, Debt payoff screen, Settings and backup screen
 - Easiest capture: run the app on your iPhone and use the normal screenshot shortcut
