@@ -51,6 +51,11 @@ if (html) {
     ["destructive action confirmation", "confirm(\"Clear all transactions"],
     ["nonnegative numeric clamp", "const money=v=>"],
     ["bills primary nav", "['bills','Bills']"],
+    ["transaction edit row", "data-edittxn"],
+    ["transaction edit handler", "openTxn(b.dataset.edittxn)"],
+    ["transaction delete confirmation", "Delete this transaction?"],
+    ["transaction recalculation", "function recalcItem"],
+    ["backup reminder", "function backupReminder"],
   ];
 
   for (const [label, needle] of checks) {
