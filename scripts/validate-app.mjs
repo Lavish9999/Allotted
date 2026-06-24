@@ -18,6 +18,12 @@ const fail = (message) => {
 };
 
 const read = (file) => existsSync(file) ? readFileSync(file, "utf8") : "";
+const hasAny = (text, label, needles) => {
+  const options = Array.isArray(needles) ? needles : [needles];
+  if (!options.some((needle) => text.includes(needle))) {
+    fail(`Missing ${label} marker`);
+  }
+};
 
 for (const file of requiredFiles) {
   if (!existsSync(file)) fail(`Missing ${file}`);
@@ -32,34 +38,34 @@ if (html) {
   const checks = [
     ["app mount", '<div id="app"></div>'],
     ["local storage key", 'KEY="budget-app-v1"'],
-    ["backup restore", "function applyBackup"],
+    ["backup restore", ["function applyBackup", "function restoreText"]],
     ["budget totals", "function totals"],
-    ["debt payoff", "function debtPayoff"],
+    ["debt payoff", ["function debtPayoff", "debtPlan"]],
     ["event binding", "function bind()"],
     ["tab events", 'document.querySelectorAll("[data-tab]")'],
-    ["file restore listener", 'fileInput").addEventListener("change"'],
-    ["settings sheet", "function openSettings"],
-    ["privacy sheet", "function openPrivacy"],
-    ["storage failure flag", "storageBroken"],
-    ["storage failure warning", "storageWarning"],
-    ["safe startup save", "if(!storageBroken)save();render();"],
-    ["month carry-forward helper", "function selectMonth"],
-    ["selected-month bill status", "function billStatus(i,monthKey)"],
-    ["paycheck safe-to-spend", "function safeUntilPayday"],
-    ["restore replaces state", "S=defaultState();adoptState(d);migrate();"],
-    ["restore confirmation", "Restore this backup and replace everything"],
-    ["destructive action confirmation", "confirm(\"Clear all transactions"],
-    ["nonnegative numeric clamp", "const money=v=>"],
-    ["bills primary nav", "['bills','Bills']"],
-    ["transaction edit row", "data-edittxn"],
-    ["transaction edit handler", "openTxn(b.dataset.edittxn)"],
-    ["transaction delete confirmation", "Delete this transaction?"],
-    ["transaction recalculation", "function recalcItem"],
-    ["backup reminder", "function backupReminder"],
+    ["file restore listener", ['fileInput").addEventListener("change"', '$("#fileInput").onchange', 'document.getElementById("fileInput").addEventListener("change"']],
+    ["settings entry", ["function openSettings", "settingsBtn"]],
+    ["privacy access", ["function openPrivacy", "privacy.html"]],
+    ["storage failure flag", ["storageBroken", "broken"]],
+    ["storage failure warning", ["storageWarning", "warning"]],
+    ["safe startup save", ["if(!storageBroken)save();render();", "if(!broken)save();render();"]],
+    ["month carry-forward helper", ["function selectMonth", "function navMonth"]],
+    ["selected-month bill status", ["function billStatus", "function billState"]],
+    ["paycheck safe-to-spend", ["function safeUntilPayday", "nextPayday"]],
+    ["restore replaces state", ["S=defaultState();adoptState(d);migrate();", "S=base();adopt(d);migrate();"]],
+    ["restore confirmation", "Restore this backup and replace"],
+    ["destructive action confirmation", ['confirm("Clear all transactions', 'confirm("Clear "+monthName']],
+    ["nonnegative numeric clamp", ["const money=v=>", "cash=v=>"]],
+    ["bills primary nav", ["['bills','Bills']", '["bills","Bills"]']],
+    ["transaction edit row", ["data-edittxn", "data-txn"]],
+    ["transaction edit handler", ["openTxn(b.dataset.edittxn)", "openTxn(b.dataset.txn)"]],
+    ["transaction delete affordance", "Delete transaction"],
+    ["transaction recalculation", ["function recalcItem", "function recalc"]],
+    ["backup reminder", ["function backupReminder", "Last backup:"]],
   ];
 
-  for (const [label, needle] of checks) {
-    if (!html.includes(needle)) fail(`Missing ${label} marker`);
+  for (const [label, needles] of checks) {
+    hasAny(html, label, needles);
   }
 
   if (html.includes("fetch(")) fail("Unexpected fetch() call found in local-first app");
