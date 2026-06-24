@@ -1,41 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Allotted Support</title>
-  <style>
-    body{margin:0;background:#0B0E10;color:#EDF1F2;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;line-height:1.6}
-    main{max-width:760px;margin:0 auto;padding:32px 20px}
-    h1{font-size:30px;line-height:1.1;margin:0 0 8px}
-    h2{font-size:18px;margin:28px 0 8px}
-    p,li{color:#B7C0C3}
-    a{color:#2DD4BF}
-    .card{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);border-radius:16px;padding:16px;margin:20px 0}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allotted — Support</title>
+<style>
+:root{--bg:#0B0E10;--card:rgba(255,255,255,.04);--line:rgba(255,255,255,.08);--text:#EDF1F2;--dim:#8C979C;--teal:#2DD4BF}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,sans-serif;line-height:1.65;padding:40px 20px;letter-spacing:-.005em}
+.wrap{max-width:680px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.brand .nm{font-weight:800;font-size:20px}
+h1{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-.02em}
+.sub{color:var(--dim);font-size:15px;margin-bottom:26px}
+.contact{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:30px}
+.contact .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);font-weight:700;margin-bottom:6px}
+.contact a{font-size:18px;font-weight:800;color:var(--teal);text-decoration:none}
+h2{font-size:15px;font-weight:700;margin:22px 0 6px}
+p{color:#C9D1D3;font-size:14.5px;margin-bottom:10px}
+a{color:var(--teal)}
+footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
+</style>
 </head>
 <body>
-  <main>
-    <h1>Allotted Support</h1>
-    <p>Allotted is a private, local-first budgeting app for giving every dollar a job.</p>
+<div class="wrap">
+  <div class="brand">
+    <svg viewBox="0 0 100 100" width="40" height="40" aria-label="Allotted">
+      <line x1="50" y1="20" x2="25" y2="81" stroke="#2DD4BF" stroke-width="11.5" stroke-linecap="round"/>
+      <line x1="50" y1="20" x2="75" y2="81" stroke="#F59B45" stroke-width="11.5" stroke-linecap="round"/>
+      <line x1="37" y1="57" x2="63" y2="57" stroke="#2DD4BF" stroke-width="9.2" stroke-linecap="round"/>
+    </svg>
+    <span class="nm">Allotted</span>
+  </div>
 
-    <div class="card">
-      <strong>Before deleting the app:</strong> create a backup from Settings. Allotted stores your budget locally, so deleting app data without a backup can remove your history.
-    </div>
+  <h1>Support</h1>
+  <div class="sub">Allotted is a simple, private, zero-based budgeting app. Here's how to get help and answers to common questions.</div>
 
-    <h2>Common Help</h2>
-    <ul>
-      <li>Use <strong>Plan</strong> to assign income to savings, bills, and spending categories.</li>
-      <li>Use <strong>Spend</strong> to log purchases and see what is left.</li>
-      <li>Use <strong>Bills</strong> for recurring monthly payments and due dates.</li>
-      <li>Use <strong>More</strong> for debt payoff, weekly review, year view, settings, privacy, and backups.</li>
-    </ul>
+  <div class="contact">
+    <div class="lbl">Get in touch</div>
+    <a href="mailto:getallotted@gmail.com">getallotted@gmail.com</a>
+    <p style="margin:8px 0 0;font-size:13px;color:var(--dim)">Questions, bugs, or feedback — email anytime and I'll get back to you.</p>
+  </div>
 
-    <h2>Backups</h2>
-    <p>Go to Settings and create a backup regularly. Store it somewhere you trust, such as Files, iCloud Drive, or another private location.</p>
+  <h2>How does Allotted work?</h2>
+  <p>At the start of each month, you give every dollar of your income a job — across categories like bills, groceries, and savings — until nothing's left unassigned. Then you log what you spend and watch each category draw down. It's the zero-based budgeting method.</p>
 
-    <h2>Contact</h2>
-    <p>For support, email the address you use for App Store support or add your preferred support email here before submitting to Apple.</p>
-  </main>
+  <h2>Where is my data stored?</h2>
+  <p>Only on your device. Allotted has no accounts and no servers, and your information never leaves your phone.</p>
+
+  <h2>How do I back up my data?</h2>
+  <p>Open Settings (the gear icon) and use "Copy backup to clipboard" or "Download backup file." Paste or save it somewhere safe. Because your data is device-only, regular backups are important — if you delete the app or clear your browser without one, the data can't be recovered.</p>
+
+  <h2>Can you recover my data if I lose it?</h2>
+  <p>No. Since nothing is stored on any server, the only way to restore lost data is from a backup you made. Please back up regularly.</p>
+
+  <h2>Is Allotted really free?</h2>
+  <p>Yes — no ads, no subscriptions, no in-app purchases, and no tracking.</p>
+
+  <h2>Privacy</h2>
+  <p>See the full <a href="privacy.html">Privacy Policy</a>.</p>
+
+  <footer>© 2026 Robert Dixon · Allotted</footer>
+</div>
 </body>
 </html>
