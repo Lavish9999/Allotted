@@ -23,6 +23,10 @@ for (const file of requiredFiles) {
   if (!existsSync(file)) fail(`Missing ${file}`);
 }
 
+if (existsSync("scripts/apply-index-fixes.mjs")) {
+  fail("Build-time index patcher must not exist. www/index.html must be the source of truth.");
+}
+
 const html = read("www/index.html");
 if (html) {
   const checks = [
@@ -36,6 +40,17 @@ if (html) {
     ["file restore listener", 'fileInput").addEventListener("change"'],
     ["settings sheet", "function openSettings"],
     ["privacy sheet", "function openPrivacy"],
+    ["storage failure flag", "storageBroken"],
+    ["storage failure warning", "storageWarning"],
+    ["safe startup save", "if(!storageBroken)save();render();"],
+    ["month carry-forward helper", "function selectMonth"],
+    ["selected-month bill status", "function billStatus(i,monthKey)"],
+    ["paycheck safe-to-spend", "function safeUntilPayday"],
+    ["restore replaces state", "S=defaultState();adoptState(d);migrate();"],
+    ["restore confirmation", "Restore this backup and replace everything"],
+    ["destructive action confirmation", "confirm(\"Clear all transactions"],
+    ["nonnegative numeric clamp", "const money=v=>"],
+    ["bills primary nav", "['bills','Bills']"],
   ];
 
   for (const [label, needle] of checks) {
@@ -56,6 +71,7 @@ if (support) {
 const privacy = read("www/privacy.html");
 if (privacy) {
   if (!privacy.includes("getallotted@gmail.com")) fail("Privacy page missing support contact");
+  if (!privacy.includes("bills, debts")) fail("Privacy page should mention bills and debts data");
   if (/your-email|example\.com/i.test(privacy)) fail("Privacy page still contains placeholder contact");
 }
 
@@ -74,9 +90,23 @@ if (manifest) {
 const pkgText = read("package.json");
 if (pkgText) {
   const pkg = JSON.parse(pkgText);
-  if (!pkg.scripts?.test) fail("package.json missing scripts.test");
-  if (!pkg.scripts?.validate) fail("package.json missing scripts.validate");
+  if (pkg.scripts?.["fix:index"]) fail("package.json must not expose fix:index");
+  if (pkg.scripts?.test !== "node scripts/validate-app.mjs") fail("test script should validate committed source directly");
+  if (pkg.scripts?.validate !== "node scripts/validate-app.mjs") fail("validate script should run validation directly");
   if (!pkg.dependencies?.["@capacitor/core"]) fail("package.json missing Capacitor dependency");
+  for (const section of ["dependencies", "devDependencies"]) {
+    for (const [name, version] of Object.entries(pkg[section] || {})) {
+      if (/^[~^]/.test(version)) fail(`${name} should be pinned exactly, not ${version}`);
+    }
+  }
+}
+
+const codemagic = read("codemagic.yaml");
+if (codemagic) {
+  if (codemagic.includes("Apply app fixes")) fail("Codemagic must not patch app source during build");
+  if (!codemagic.includes("Validate committed app source")) fail("Codemagic should validate committed app source");
+  if (!/xcode:\s*26\.4/.test(codemagic)) fail("Codemagic Xcode version should be pinned");
+  if (!codemagic.includes("submit_to_app_store: false")) fail("Codemagic should not auto-submit to App Store");
 }
 
 if (failures) {
