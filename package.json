@@ -1,10 +1,11 @@
 {
   "name": "allotted",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Allotted - give every dollar a job.",
   "scripts": {
-    "test": "node scripts/validate-app.mjs",
+    "fix:index": "node scripts/apply-index-fixes.mjs",
+    "test": "npm run fix:index && node scripts/validate-app.mjs",
     "validate": "node scripts/validate-app.mjs",
     "sync": "cap sync ios",
     "add:ios": "cap add ios",
