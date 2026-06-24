@@ -9,7 +9,7 @@
     "sync": "cap sync ios",
     "add:ios": "cap add ios",
     "assets": "capacitor-assets generate --ios",
-    "open:ios": "cap open:ios"
+    "open:ios": "cap open ios"
   },
   "dependencies": {
     "@capacitor/core": "7.0.0",
