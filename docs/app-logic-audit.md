@@ -1,6 +1,6 @@
 # Allotted App Logic Audit
 
-Status: addressed in the committed `www/index.html` source as of version `1.0.4`.
+Status: addressed in the committed `www/index.html` source as of version `1.0.5`.
 
 The previous review found several high-risk issues caused by app logic living in one large file and then being patched during the build. The build-time patcher has been removed. The committed source is now the source of truth and `npm test` validates that directly.
 
@@ -42,6 +42,14 @@ Undated recurring items display `Set due date` instead of being treated as due o
 
 Debt balances, APRs, minimum payments, and extra payments are clamped to non-negative values before storage and payoff calculations.
 
+### Transaction editing
+
+Spend rows are now editable. Users can tap a transaction, change amount/date/note/category line, move it to another line, or delete it with confirmation. Item totals are recalculated after every edit/delete.
+
+### Backup reminder
+
+The dashboard now surfaces a backup reminder when the user has meaningful local data and has not backed up recently.
+
 ### Navigation
 
 Bills are now a primary tab. Debt payoff lives under More, which better matches everyday budgeting usage.
@@ -50,4 +58,4 @@ Bills are now a primary tab. Debt payoff lives under More, which better matches 
 
 - Generate a real `package-lock.json` from an unrestricted npm registry connection and then switch Codemagic from `npm install` to `npm ci`.
 - Enable public hosting for `support.html` and `privacy.html` through the manual GitHub Pages setup in `docs/pages-setup.md`.
-- Test the TestFlight build on a real iPhone with fresh install, restore backup, bill pay/unpay, month carry-forward, debt payoff, and storage backup flows.
+- Test the TestFlight build on a real iPhone with fresh install, restore backup, bill pay/unpay, transaction edit/delete, month carry-forward, debt payoff, and storage backup flows.
