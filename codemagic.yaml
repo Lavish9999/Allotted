@@ -47,15 +47,24 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles
-      - name: Increment build number
-        script: |
-          cd ios/App
-          agvtool new-version -all $(($BUILD_NUMBER + 1))
-      - name: Set marketing version
+      - name: Set iOS app version and build number
         script: |
           cd ios/App
           APP_VERSION=$(node -p "require('../../package.json').version")
+          BUILD_VERSION=$(date +%Y%m%d%H%M)
+          echo "Marketing version from package.json: $APP_VERSION"
+          echo "Build number being applied: $BUILD_VERSION"
+          echo "Bundle ID: $BUNDLE_ID"
           agvtool new-marketing-version "$APP_VERSION"
+          agvtool new-version -all "$BUILD_VERSION"
+          echo "Final Info.plist CFBundleShortVersionString: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' App/Info.plist)"
+          echo "Final Info.plist CFBundleVersion: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' App/Info.plist)"
+      - name: Diagnose final iOS version values
+        script: |
+          echo "Reading ios/App/App/Info.plist before IPA build"
+          echo "CFBundleShortVersionString: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ios/App/App/Info.plist)"
+          echo "CFBundleVersion: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' ios/App/App/Info.plist)"
+          echo "CFBundleIdentifier: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' ios/App/App/Info.plist)"
       - name: Build ipa
         script: |
           xcode-project build-ipa \
