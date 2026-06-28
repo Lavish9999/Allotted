@@ -41,6 +41,7 @@ if (html) {
     ["backup restore", ["function applyBackup", "function restoreText"]],
     ["budget totals", "function totals"],
     ["debt payoff", ["function debtPayoff", "debtPlan"]],
+    ["debt payoff runaway guard", ["unpayable", "Payment needs review"]],
     ["event binding", "function bind()"],
     ["tab events", 'document.querySelectorAll("[data-tab]")'],
     ["file restore listener", ['fileInput").addEventListener("change"', '$("#fileInput").onchange', 'document.getElementById("fileInput").addEventListener("change"']],
