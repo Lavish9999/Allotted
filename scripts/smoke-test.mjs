@@ -37,6 +37,17 @@ const check = (cond, msg) => { if (!cond) { fails++; console.error("FAIL:", msg)
 const run = (code) => vm.runInContext(code, ctx);
 const render = (tab) => { run(`tab=${JSON.stringify(tab)};render()`); return appEl.innerHTML; };
 const tick = () => new Promise((r) => setImmediate(r));
+const withClock = (year, monthIndex, day, fn) => {
+  const RealDate = ctx.Date;
+  function FakeDate(...args) { return args.length ? new RealDate(...args) : new RealDate(year, monthIndex, day); }
+  FakeDate.UTC = RealDate.UTC;
+  FakeDate.parse = RealDate.parse;
+  FakeDate.now = () => new RealDate(year, monthIndex, day).getTime();
+  FakeDate.prototype = RealDate.prototype;
+  ctx.Date = FakeDate;
+  try { return fn(); }
+  finally { ctx.Date = RealDate; }
+};
 
 // ---------- 1. Local free mode still works ----------
 run(`
@@ -183,6 +194,15 @@ var M3=mergeCloudStates(A,B,[{t:"item",id:"i2",at:1}]);
   run(`var _nd=item("Mystery Bill",45,true);_nd.dueDay=null;_nd.dueDate="";_g0.items.push(_nd);commit()`);
   check(render("pbills").includes("Needs a due date") && appEl.innerHTML.includes("Mystery Bill"), "bill guard surfaces bills missing due dates");
   run(`_g0.items=_g0.items.filter(i=>i.id!==_nd.id);commit()`);
+  const savedForOverdue = run(`JSON.stringify(S)`);
+  withClock(2026, 6, 15, () => {
+    run(`S=defaultState();mk="2026-07";var _om=blankMonth();_om.income[0].amount=2000;_om.groups[0].items.push(item("Late Rent",800,true,10,"2026-07-10","monthly"));S.months[mk]=_om;S.premium.active=true;S.settings.onboardingCompleted=true;migrate()`);
+    bg = render("pbills");
+    check(bg.includes("Late Rent") && /Late Rent[\s\S]{0,220}Overdue/.test(bg), "bill guard shows current-month overdue bills");
+    check(/Overdue<\/div><div class=money>1/.test(bg), "bill guard overdue summary counts current-month overdue bills");
+    check(/Due in 30 days<\/div><div class=money>\$800/.test(bg), "bill guard 30-day total still includes the next monthly occurrence");
+  });
+  run(`S=JSON.parse(${JSON.stringify(savedForOverdue)});migrate();_g0=S.months[mk].groups[0]`);
 
   // Subscription Watch: detects recurring transactions across months
   run(`
@@ -200,12 +220,17 @@ var M3=mergeCloudStates(A,B,[{t:"item",id:"i2",at:1}]);
   check(render("psubs").includes("Canceled saved"), "canceled savings summarized");
   run(`setSubStatus("netflix","canceling")`);
   check(render("psubs").includes("Cancel checklist"), "canceling shows cancellation checklist");
+  run(`var _subBill=S.months[mk].groups[0].items.find(i=>i.name==="Streaming TV");setSubStatus(_subBill.name.toLowerCase(),"canceled");_subBill.name="Streaming TV Family";var _subRenamed=subCandidates().find(s=>s.name==="Streaming TV Family")`);
+  check(run(`subStatusOf(_subRenamed.key,_subRenamed.aliases)`) === "canceled", "bill subscription status survives a bill rename");
+  run(`S.months[mk].groups[1].items[0].txns.push({id:id(),date:dateKey(todayLocal()),amount:74.99,note:"Amazon"});commit()`);
+  check(!run(`subCandidates().some(s=>s.source==="txn"&&s.key==="amazon")`), "one-off Amazon shopping note is not treated as a subscription");
 
   // Debt planner: schedule, unpayable warning, avalanche savings on realistic debts
   run(`var _d=debtSim("avalanche",100)`);
   check(run("_d.schedule.length>0 && _d.schedule.length<=12"), "debt sim produces first-12-months schedule");
   check(run("_d.totalPaid>0"), "debt sim reports total paid");
   check(render("debt").includes("First 12 months"), "debt planner shows payment schedule");
+  check(appEl.innerHTML.includes("Paid-off minimums are not rolled"), "debt planner states minimum rollover is not automatic");
   run(`var _bad={id:id(),name:"Loan Shark",balance:5000,apr:60,minPayment:10};S.debts.push(_bad);commit()`);
   check(render("debt").includes("may not go down with the current minimum payment"), "unpayable minimum warning shown");
   run(`S.debts=S.debts.filter(d=>d.id!==_bad.id);commit()`);
