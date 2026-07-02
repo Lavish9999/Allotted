@@ -14,6 +14,7 @@ This is a Capacitor wrapper around the Allotted web app. The pipeline runs in th
 - `codemagic.yaml` - cloud build, signing, and TestFlight upload pipeline
 - `scripts/validate-app.mjs` - release validation used by `npm test`
 - `appstore-listing.md` - paste-ready App Store listing material
+- `docs/premium.md` - Premium architecture, test-mode billing, and App Store Connect subscription setup
 
 ## Local checks
 

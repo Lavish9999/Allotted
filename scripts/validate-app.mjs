@@ -63,6 +63,19 @@ if (html) {
     ["transaction delete affordance", "Delete transaction"],
     ["transaction recalculation", ["function recalcItem", "function recalc"]],
     ["backup reminder", ["function backupReminder", "Last backup:"]],
+    ["premium state default", ["function defaultPremium"]],
+    ["premium flag helper", ["function isPremium"]],
+    ["reusable premium gate", ["function premiumGate"]],
+    ["subscription manager", ["SubscriptionManager"]],
+    ["monthly product id", ["allotted.premium.monthly"]],
+    ["yearly product id", ["allotted.premium.yearly"]],
+    ["restore purchases affordance", ["pRestore"]],
+    ["premium hub screen", ["function premium()"]],
+    ["cash flow forecast", ["function forecastSeries"]],
+    ["bill guard", ["function pBillguardFull"]],
+    ["subscription watch", ["function subCandidates"]],
+    ["weekly money review", ["function pWeeklyFull"]],
+    ["debt planner comparison", ["function debtSim"]],
   ];
 
   for (const [label, needles] of checks) {
