@@ -1,0 +1,20 @@
+{
+  "name": "@allotted/iap",
+  "version": "1.0.0",
+  "description": "Allotted native iOS StoreKit bridge for Premium subscriptions.",
+  "main": "index.js",
+  "files": [
+    "AllottedIAP.podspec",
+    "ios",
+    "index.js",
+    "package.json"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=7.0.0"
+  }
+}
