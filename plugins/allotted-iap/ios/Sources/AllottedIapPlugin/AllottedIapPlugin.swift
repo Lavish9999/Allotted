@@ -2,9 +2,9 @@ import Capacitor
 import Foundation
 import StoreKit
 
-@objc(AllottedIAPPlugin)
-public class AllottedIAPPlugin: CAPPlugin, CAPBridgedPlugin {
-    public let identifier = "AllottedIAPPlugin"
+@objc(AllottedIapPlugin)
+public class AllottedIapPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "AllottedIapPlugin"
     public let jsName = "AllottedIAP"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),

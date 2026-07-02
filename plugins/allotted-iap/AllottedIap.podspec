@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
-  s.name = 'AllottedIAP'
+  s.name = 'AllottedIap'
   s.version = '1.0.0'
   s.summary = 'StoreKit subscription bridge for Allotted Premium.'
   s.license = { :type => 'MIT' }
