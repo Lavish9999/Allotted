@@ -9,6 +9,10 @@ const requiredFiles = [
   "capacitor.config.json",
   "codemagic.yaml",
   "package.json",
+  "docs/supabase-schema.sql",
+  "docs/cloud-accounts.md",
+  ".env.example",
+  "www/cloud-config.example.js",
 ];
 
 let failures = 0;
@@ -31,6 +35,13 @@ for (const file of requiredFiles) {
 
 if (existsSync("scripts/apply-index-fixes.mjs")) {
   fail("Build-time index patcher must not exist. www/index.html must be the source of truth.");
+}
+
+if (existsSync("www/cloud-config.js")) {
+  fail("www/cloud-config.js must not be committed. Copy www/cloud-config.example.js locally instead.");
+}
+if (existsSync(".env")) {
+  fail(".env must not be committed. Use .env.example as the template.");
 }
 
 const html = read("www/index.html");
@@ -76,6 +87,18 @@ if (html) {
     ["subscription watch", ["function subCandidates"]],
     ["weekly money review", ["function pWeeklyFull"]],
     ["debt planner comparison", ["function debtSim"]],
+    ["account screen", ["function account()"]],
+    ["auth service", ["const AuthService"]],
+    ["cloud sync service", ["const SyncService"]],
+    ["household service", ["const HouseholdService"]],
+    ["invite code service", ["const InviteService"]],
+    ["migration export service", ["const MigrationService"]],
+    ["mock cloud provider", ["const MockCloud"]],
+    ["cloud sync screen", ["function pCloudFull"]],
+    ["household sharing screen", ["function pHouseFull"]],
+    ["conflict-safe merge", ["function mergeCloudStates"]],
+    ["cloud state default", ["function defaultCloud"]],
+    ["session stored outside backups", ["allotted-session-v1"]],
   ];
 
   for (const [label, needles] of checks) {
@@ -85,6 +108,8 @@ if (html) {
   if (html.includes("fetch(")) fail("Unexpected fetch() call found in local-first app");
   if (/https?:\/\//i.test(html)) fail("Unexpected external URL found in app shell");
   if (/@import/i.test(html)) fail("Unexpected CSS @import found in app shell");
+  const cfgExample = read("www/cloud-config.example.js");
+  if (/eyJ[A-Za-z0-9_-]{24,}/.test(html + cfgExample)) fail("Possible real Supabase key committed in app files");
 }
 
 const support = read("www/support.html");

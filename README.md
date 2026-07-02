@@ -15,6 +15,8 @@ This is a Capacitor wrapper around the Allotted web app. The pipeline runs in th
 - `scripts/validate-app.mjs` - release validation used by `npm test`
 - `appstore-listing.md` - paste-ready App Store listing material
 - `docs/premium.md` - Premium architecture, test-mode billing, and App Store Connect subscription setup
+- `docs/cloud-accounts.md` - accounts, cloud sync, household sharing setup (Supabase)
+- `docs/supabase-schema.sql` - cloud database tables and Row Level Security policies
 
 ## Local checks
 
