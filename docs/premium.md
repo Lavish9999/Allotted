@@ -1,6 +1,6 @@
 # Allotted Premium
 
-Premium is fully implemented in `www/index.html` (same single-file, local-first architecture as the rest of the app). This document covers how it works, how test mode behaves, how to connect real App Store billing, and the exact App Store Connect setup steps.
+Premium is implemented in `www/index.html` (same local-first architecture as the rest of the app), with real iOS App Store subscriptions provided by the local Capacitor plugin in `plugins/allotted-iap`. This document covers how it works, how browser/dev test mode behaves, and the exact App Store Connect setup steps.
 
 ## Pricing and product IDs
 
@@ -9,7 +9,7 @@ Premium is fully implemented in `www/index.html` (same single-file, local-first 
 | Monthly | $4.99/mo  | `allotted.premium.monthly` |
 | Yearly  | $39.99/yr | `allotted.premium.yearly`  |
 
-Both IDs live in one place in `www/index.html`: the `PREMIUM_PRODUCTS` constant. They must match the product IDs you create in App Store Connect exactly.
+Both IDs live in `www/index.html`, `www/iap-bridge.js`, and the native StoreKit plugin. They must match the product IDs you create in App Store Connect exactly.
 
 ## What Premium includes
 
@@ -33,35 +33,24 @@ Every number above is computed on-device from data the user typed in. There is *
 - `defaultState`, `adoptState`, and `migrate` all handle the new field, so old backups restore cleanly to Free and new backups carry Premium status and subscription statuses with them.
 - No network calls were added. The app still passes the local-first validator (`npm test`), which forbids `fetch()`, external URLs, and CSS imports in the app shell.
 
-## Test mode (how purchases work today)
+## Billing behavior
 
-Real StoreKit requires a native in-app purchase plugin, which is not installed yet. Until then, `SubscriptionManager` runs in **test mode**:
+On iOS, Codemagic installs the local `@allotted/iap` Capacitor plugin and `www/iap-bridge.js` exposes:
 
-- **Start Premium** shows a confirm dialog explicitly labeled "Test mode... No real charge" and then sets the local premium flag.
-- **Restore purchases** reactivates Premium if this device ever activated it (`activatedAt` is kept on deactivate); otherwise it reports that nothing was found.
-- Premium users in test mode get a **Turn off** button so you can flip back to Free while testing.
-- The pricing screen shows a visible "Test mode" note whenever no native billing bridge is present.
+- `window.AllottedIAP.purchase(productId)`
+- `window.AllottedIAP.restore()`
+- `window.AllottedIAP.getStatus()`
+- `window.AllottedIAP.getProducts()`
 
-Ship decision: you can ship v1.1.0 to TestFlight with test mode to validate the UX, but **do not submit to App Review with a purchasable test-mode Premium** - simulated purchases of real-priced products will be rejected. Connect real billing first (below), or hide the Start button behind the native check for the store build.
+The Swift plugin uses StoreKit 2: `Product.products`, `product.purchase()`, `AppStore.sync()`, and `Transaction.currentEntitlements`. Expired, revoked, canceled, pending, or missing entitlements resolve as inactive and do not unlock Premium.
 
-## Connecting real App Store billing
+In a browser/dev build with no native Capacitor bridge, `SubscriptionManager` still has a clearly labeled local test path so the Premium UI can be smoke-tested without App Store billing. On a native iOS build where Capacitor is present but the bridge is missing, the app does **not** run the fake purchase path; it tells the user App Store purchases are unavailable in that build.
 
-`SubscriptionManager` feature-detects a native bridge: if `window.AllottedIAP` exists with `purchase(productId) -> Promise<boolean>` and `restore() -> Promise<planKey|null>`, it uses it and labels the subscription as App Store-managed. Two ways to provide that bridge:
+## Native implementation
 
-**Option A - RevenueCat (recommended, least StoreKit code):**
-1. `npm install @revenuecat/purchases-capacitor --save-exact` and `npx cap sync ios`.
-2. Create a RevenueCat project, add the app with bundle ID `com.twotonemotion.allotted`, and attach both product IDs to an entitlement named `premium`.
-3. In a small bootstrap script (or directly in `index.html`), configure the SDK and expose the bridge:
-   - `purchase(id)`: call `Purchases.purchaseStoreProduct`, resolve `true` when the `premium` entitlement is active.
-   - `restore()`: call `Purchases.restorePurchases`, resolve `"monthly"`/`"yearly"` from the active entitlement's product ID, else `null`.
-4. Note: RevenueCat makes network calls from the native layer. Decide whether to relax the validator's URL rule (it only scans `index.html`, so a separate JS file or native-side config keeps it green) and update the App Privacy answers (purchase history is collected by RevenueCat unless you configure otherwise).
+The iOS project is generated during Codemagic (`npx cap add ios`). The local plugin dependency in `package.json` lets `npx cap sync ios` copy the StoreKit bridge into that generated project. No Supabase or app-shell network code is involved.
 
-**Option B - @capgo/native-purchases (thin StoreKit wrapper, no third-party account):**
-1. `npm install @capgo/native-purchases --save-exact` and `npx cap sync ios`.
-2. Wrap its `purchaseProduct`/`restorePurchases` calls in the same `window.AllottedIAP` contract.
-3. You are responsible for receipt/entitlement checks; for a local-first app, trusting StoreKit's on-device transaction state is the pragmatic choice.
-
-Either way, pin the dependency exactly (the validator rejects `^`/`~` ranges) and run a Codemagic build to confirm the native project compiles.
+Run a Codemagic/TestFlight build to confirm the native project compiles and that StoreKit can see the products from App Store Connect.
 
 ## App Store Connect checklist (exact steps)
 
@@ -74,9 +63,9 @@ Either way, pin the dependency exactly (the validator rejects `^`/`~` ranges) an
 5. **Review information**: upload a screenshot of the Premium screen for each product and add review notes explaining what Premium unlocks.
 6. **App-level requirements for subscription apps**: your app description must state the subscription terms, and the app must link to your privacy policy and Terms of Use (Apple's standard EULA link is acceptable) - add these to `appstore-listing.md` and the app record.
 7. **Sandbox tester**: Users and Access -> Sandbox Testers -> create one; sign into it on a test device (Settings -> App Store -> Sandbox Account) and verify purchase, restore, upgrade/downgrade between plans, and cancellation.
-8. **App Privacy**: currently "Data Not Collected" is accurate. With plain StoreKit (Option B) it can stay that way; with RevenueCat, update the questionnaire (typically Purchases -> Purchase History, linked-to-user off, tracking off).
+8. **App Privacy**: with plain StoreKit and no third-party purchase analytics, "Data Not Collected" can stay accurate for Allotted's own data handling.
 9. Attach the new build (v1.1.0), select both subscription products for review with the first submission, and submit.
 
 ## Validation
 
-`npm test` now also asserts the Premium surface exists: product IDs, `SubscriptionManager`, `premiumGate`, the hub screen, and each of the five tools. The existing local-first checks (no fetch, no external URLs) still pass against the Premium code.
+`npm test` now also asserts the Premium surface exists, the StoreKit plugin is present, product IDs match, restore/status paths exist, and expired/no-entitlement results do not unlock Premium. The existing local-first checks still pass: no `fetch`, external URLs, or Supabase calls in `www/index.html`.

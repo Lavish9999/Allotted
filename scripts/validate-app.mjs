@@ -14,6 +14,10 @@ const requiredFiles = [
   ".env.example",
   "www/cloud-config.example.js",
   "www/cloud.js",
+  "www/iap-bridge.js",
+  "plugins/allotted-iap/package.json",
+  "plugins/allotted-iap/AllottedIAP.podspec",
+  "plugins/allotted-iap/ios/Sources/AllottedIAPPlugin/AllottedIAPPlugin.swift",
   "scripts/write-cloud-config.mjs",
 ];
 
@@ -86,6 +90,8 @@ if (html) {
     ["monthly product id", ["allotted.premium.monthly"]],
     ["yearly product id", ["allotted.premium.yearly"]],
     ["restore purchases affordance", ["pRestore"]],
+    ["iap bridge script", ["<script src=\"iap-bridge.js\"></script>"]],
+    ["native iap status refresh", ["SubscriptionManager.refreshStatus", "getStatus"]],
     ["premium hub screen", ["function premium()"]],
     ["cash flow forecast", ["function forecastSeries"]],
     ["bill guard", ["function pBillguardFull"]],
@@ -120,6 +126,7 @@ if (html) {
   if (/@import/i.test(html)) fail("Unexpected CSS @import found in app shell");
   const cfgExample = read("www/cloud-config.example.js");
   const cloudjs = read("www/cloud.js");
+  const iapBridge = read("www/iap-bridge.js");
   if (/eyJ[A-Za-z0-9_-]{24,}/.test(html + cfgExample + cloudjs)) fail("Possible real Supabase key committed in app files");
   if (/service_role/i.test(html + cfgExample + cloudjs)) fail("service_role must never appear in app files");
   if (cloudjs) {
@@ -128,6 +135,14 @@ if (html) {
     if (!cloudjs.includes("grant_type=password")) fail("cloud.js missing signInWithPassword flow");
     if (!cloudjs.includes("rpc/join_household")) fail("cloud.js must join households via the secure join_household RPC");
     if (!cloudjs.includes("/auth/v1/recover")) fail("cloud.js missing password reset flow");
+  }
+  if (iapBridge) {
+    if (!iapBridge.includes("window.AllottedIAP")) fail("iap-bridge.js must expose window.AllottedIAP");
+    if (!iapBridge.includes("Capacitor") || !iapBridge.includes("Plugins.AllottedIAP")) fail("iap-bridge.js must wrap the native Capacitor AllottedIAP plugin");
+    for (const marker of ["purchase", "restore", "getStatus", "getProducts", "allotted.premium.monthly", "allotted.premium.yearly"]) {
+      if (!iapBridge.includes(marker)) fail(`iap-bridge.js missing ${marker}`);
+    }
+    if (iapBridge.includes("fetch(") || /https?:\/\//i.test(iapBridge)) fail("iap-bridge.js must not make network calls");
   }
   if (html.includes("supabase.co") || html.includes("createClient(")) fail("Supabase calls must stay isolated in www/cloud.js");
 }
@@ -164,10 +179,29 @@ if (pkgText) {
   if (pkg.scripts?.test !== "node scripts/validate-app.mjs") fail("test script should validate committed source directly");
   if (pkg.scripts?.validate !== "node scripts/validate-app.mjs") fail("validate script should run validation directly");
   if (!pkg.dependencies?.["@capacitor/core"]) fail("package.json missing Capacitor dependency");
+  if (pkg.dependencies?.["@allotted/iap"] !== "file:plugins/allotted-iap") fail("package.json must include the local StoreKit IAP plugin");
   for (const section of ["dependencies", "devDependencies"]) {
     for (const [name, version] of Object.entries(pkg[section] || {})) {
       if (/^[~^]/.test(version)) fail(`${name} should be pinned exactly, not ${version}`);
     }
+  }
+}
+
+const iapPkg = read("plugins/allotted-iap/package.json");
+const iapPodspec = read("plugins/allotted-iap/AllottedIAP.podspec");
+const iapSwift = read("plugins/allotted-iap/ios/Sources/AllottedIAPPlugin/AllottedIAPPlugin.swift");
+if (iapPkg) {
+  const parsed = JSON.parse(iapPkg);
+  if (parsed.name !== "@allotted/iap") fail("IAP plugin package name should be @allotted/iap");
+  if (parsed.capacitor?.ios?.src !== "ios") fail("IAP plugin must declare an iOS Capacitor source");
+}
+if (iapPodspec) {
+  if (!iapPodspec.includes("s.dependency 'Capacitor'")) fail("IAP podspec must depend on Capacitor");
+  if (!iapPodspec.includes("ios/Sources")) fail("IAP podspec must include Swift source files");
+}
+if (iapSwift) {
+  for (const marker of ["import StoreKit", "Product.products", "product.purchase()", "AppStore.sync()", "Transaction.currentEntitlements", "allotted.premium.monthly", "allotted.premium.yearly", '"active": false']) {
+    if (!iapSwift.includes(marker)) fail(`IAP Swift bridge missing ${marker}`);
   }
 }
 

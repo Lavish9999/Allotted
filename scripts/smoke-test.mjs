@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 const html = readFileSync(new URL("../www/index.html", import.meta.url), "utf8");
+const iapBridgeSrc = readFileSync(new URL("../www/iap-bridge.js", import.meta.url), "utf8");
 const src = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
 
 const stubEl = () => ({ onclick: null, onchange: null, innerHTML: "", value: "", dataset: {},
@@ -75,6 +76,8 @@ check(run("S.cloud.syncEnabled") === false, "cloud sync off by default");
 const hub = render("premium");
 check(hub.includes("Cloud Sync") && hub.includes("Household Sharing"), "premium screen lists Cloud Sync and Household Sharing");
 check(hub.includes("$4.99") && hub.includes("$39.99"), "pricing still shown");
+check(html.includes("iap-bridge.js") && iapBridgeSrc.includes("window.AllottedIAP"), "native IAP bridge is bundled");
+check(iapBridgeSrc.includes("allotted.premium.monthly") && iapBridgeSrc.includes("allotted.premium.yearly"), "native IAP bridge includes App Store product IDs");
 
 // ---------- 3. Sign-in UI renders ----------
 const acct = render("account");
@@ -99,6 +102,23 @@ const main = async () => {
   check(run("currentUser().email") === "taylor@parkers.home", "sign up creates session");
   check(!JSON.stringify(run("JSON.parse(backupPayload())")).includes("allotted-session"), "backups do not contain session data");
   check(render("account").includes("Signed in"), "account status UI shows signed in");
+
+  // ---------- Native App Store subscription bridge contract ----------
+  run(`S.premium=defaultPremium();window.AllottedIAP={
+    purchase: productId => Promise.resolve({active:true,productId}),
+    restore: () => Promise.resolve({active:true,productId:"allotted.premium.yearly"}),
+    getStatus: () => Promise.resolve({active:false})
+  }`);
+  run(`SubscriptionManager.purchase("monthly")`);
+  await tick(); await tick();
+  check(run(`S.premium.active===true&&S.premium.provider==="appstore"&&S.premium.plan==="monthly"`), "native purchase unlocks monthly App Store entitlement");
+  run(`S.premium=defaultPremium();SubscriptionManager.restore()`);
+  await tick(); await tick();
+  check(run(`S.premium.active===true&&S.premium.provider==="appstore"&&S.premium.plan==="yearly"`), "native restore unlocks active yearly App Store entitlement");
+  run(`S.premium={...defaultPremium(),active:true,provider:"appstore",plan:"yearly",activatedAt:Date.now()}`);
+  await run(`SubscriptionManager.refreshStatus()`);
+  check(run(`S.premium.active===false`), "expired/no App Store entitlement does not stay unlocked");
+  run(`delete window.AllottedIAP;S.premium=defaultPremium()`);
 
   // ---------- Premium + cloud sync ----------
   run(`SubscriptionManager.purchase("yearly")`);
