@@ -154,6 +154,76 @@ var M3=mergeCloudStates(A,B,[{t:"item",id:"i2",at:1}]);
   check(run("S.cloud.syncStatus") === "error" && /premium/i.test(run("S.cloud.lastError")), "sync without premium -> clean error state");
   run(`S.premium.active=true`);
 
+  // ---------- Premium tools: behavioral checks ----------
+  // Forecast has per-day data and reacts to paying a bill
+  run(`var _f1=forecastSeries(14)`);
+  check(run("_f1.pts[0].start!==undefined && Array.isArray(_f1.pts[0].bills)"), "forecast produces daily rows (start, bills, end)");
+  check(run("typeof _f1.start==='number'"), "forecast reports starting cash");
+  check(render("pforecast").includes("Daily forecast") && appEl.innerHTML.includes("Risk day"), "forecast UI shows daily section and risk day");
+  run(`var _g0=S.months[mk].groups[0];var _rent=_g0.items.find(i=>i.name==="Rent");payBill(_g0.id,_rent.id)`);
+  run(`var _f2=forecastSeries(14)`);
+  check(run("_f2.billTotal") < run("_f1.billTotal"), "forecast updates when a bill is marked paid");
+  run(`payBill(_g0.id,_rent.id)`); // un-pay Rent to restore state
+
+  // Bill Guard: shortfall flag appears, and clears when the bill is paid
+  run(`var _mega=item("Mega Payment",99999,true,+dateKey(addDays(todayLocal(),2)).slice(8,10));_g0.items.push(_mega);commit()`);
+  let bg = render("pbills");
+  check(bg.includes("may put you short") && bg.includes("Not covered"), "bill guard flags shortfall risk before payday");
+  check(/At risk<\/div><div class=money>[1-9]/.test(bg), "at-risk summary counts the risky bill");
+  run(`payBill(_g0.id,_mega.id)`);
+  bg = render("pbills");
+  check(bg.includes("Paid") && !new RegExp('Mega Payment[\\s\\S]{0,400}Mark paid').test(bg), "paid bill shows Paid and loses Mark paid button");
+  check(!/may put you short[^<]*<\/b><span[^>]*>[^<]*Mega Payment/.test(bg), "paid bill leaves the at-risk banner");
+  run(`_g0.items=_g0.items.filter(i=>i.id!==_mega.id);cloudTombstone("item",_mega.id);commit()`);
+  bg = render("pbills");
+  check(!bg.includes("may put you short"), "removing the bill clears the shortfall banner (reactive)");
+  check(/At risk<\/div><div class=money>0/.test(bg), "at-risk count returns to zero");
+
+  // Bill Guard: bills without due dates are surfaced
+  run(`var _nd=item("Mystery Bill",45,true);_nd.dueDay=null;_nd.dueDate="";_g0.items.push(_nd);commit()`);
+  check(render("pbills").includes("Needs a due date") && appEl.innerHTML.includes("Mystery Bill"), "bill guard surfaces bills missing due dates");
+  run(`_g0.items=_g0.items.filter(i=>i.id!==_nd.id);commit()`);
+
+  // Subscription Watch: detects recurring transactions across months
+  run(`
+["2026-03","2026-04"].forEach(k=>{if(!S.months[k]){let mm=blankMonth();S.months[k]=mm}});
+[["2026-03","2026-03-08"],["2026-04","2026-04-08"]].forEach(pair=>{
+  let it=S.months[pair[0]].groups[1].items;
+  if(!it.length)it.push(item("Fun",100));
+  it[0].txns.push({id:id(),date:pair[1],amount:15.99,note:"Netflix"});
+});commit()`);
+  check(run(`subCandidates().some(s=>s.source==="txn"&&s.key==="netflix")`), "subscription watch detects repeated txns across months");
+  const subUI = render("psubs");
+  check(subUI.includes("Possible subscription") && subUI.includes("Netflix"), "detected subscription labeled in UI");
+  run(`setSubStatus("netflix","canceled")`);
+  check(run(`subStatusOf("netflix")`) === "canceled", "canceled status persists");
+  check(render("psubs").includes("Canceled saved"), "canceled savings summarized");
+  run(`setSubStatus("netflix","canceling")`);
+  check(render("psubs").includes("Cancel checklist"), "canceling shows cancellation checklist");
+
+  // Debt planner: schedule, unpayable warning, avalanche savings on realistic debts
+  run(`var _d=debtSim("avalanche",100)`);
+  check(run("_d.schedule.length>0 && _d.schedule.length<=12"), "debt sim produces first-12-months schedule");
+  check(run("_d.totalPaid>0"), "debt sim reports total paid");
+  check(render("debt").includes("First 12 months"), "debt planner shows payment schedule");
+  run(`var _bad={id:id(),name:"Loan Shark",balance:5000,apr:60,minPayment:10};S.debts.push(_bad);commit()`);
+  check(render("debt").includes("may not go down with the current minimum payment"), "unpayable minimum warning shown");
+  run(`S.debts=S.debts.filter(d=>d.id!==_bad.id);commit()`);
+  run(`var _r1=debtSim("avalanche",50),_r2=debtSim("snowball",50)`);
+  check(run("_r1.interest<=_r2.interest"), "avalanche saves interest in realistic example");
+
+  // Weekly review: suggested action responds to the situation
+  run(`var _dip=item("Huge Due",99999,true,+dateKey(addDays(todayLocal(),3)).slice(8,10));_g0.items.push(_dip);commit()`);
+  check(run(`weeklyAction({out:100,big:null,inAmt:500,leftover:400}).tab`) === "pforecast", "weekly action: forecast dip -> protect bills");
+  run(`_g0.items=_g0.items.filter(i=>i.id!==_dip.id);commit()`);
+  check(run(`weeklyAction({out:100,big:null,inAmt:800,leftover:700}).tab`) === "debt", "weekly action: leftover + debts -> attack debt");
+  run(`var _debts=S.debts;S.debts=[]`);
+  check(/savings/i.test(run(`weeklyAction({out:100,big:null,inAmt:800,leftover:700}).body`)), "weekly action: leftover, no debts -> savings");
+  run(`S.debts=_debts`);
+  check(run(`weeklyAction({out:1000,big:["Shopping",600],inAmt:900,leftover:-100}).title`).includes("Shopping") || run(`weeklyAction({out:1000,big:["Shopping",600],inAmt:900,leftover:-100}).tab`) === "psubs", "weekly action: overweight category or sub audit on overspend");
+  const wUI = render("pweekly");
+  check(wUI.includes("Biggest transaction") && wUI.includes("Subscriptions paid") && wUI.includes("Vs prior 7 days"), "weekly review shows deep stats");
+
   // ---------- Premium enforcement at the service level ----------
   run(`S.premium.active=false`);
   let gateErr = "";
