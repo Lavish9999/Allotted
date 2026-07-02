@@ -23,6 +23,8 @@ workflows:
           fi
       - name: Install npm dependencies
         script: npm install --no-audit --no-fund
+      - name: Generate Supabase cloud config
+        script: node scripts/write-cloud-config.mjs
       - name: Validate committed app source
         script: npm test
       - name: Add iOS platform
