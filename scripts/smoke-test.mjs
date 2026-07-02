@@ -154,6 +154,75 @@ var M3=mergeCloudStates(A,B,[{t:"item",id:"i2",at:1}]);
   check(run("S.cloud.syncStatus") === "error" && /premium/i.test(run("S.cloud.lastError")), "sync without premium -> clean error state");
   run(`S.premium.active=true`);
 
+  // ---------- Premium enforcement at the service level ----------
+  run(`S.premium.active=false`);
+  let gateErr = "";
+  await run(`HouseholdService.create("Nope")`).catch((e) => (gateErr = e.message));
+  check(/premium/i.test(gateErr), "signed-in free user cannot create household (service-level gate)");
+  gateErr = "";
+  await run(`HouseholdService.join("ABCD2345")`).catch((e) => (gateErr = e.message));
+  check(/premium/i.test(gateErr), "signed-in free user cannot join household (service-level gate)");
+  check(run("SyncService.enable()") === false, "signed-in free user cannot enable sync");
+  run(`S.premium.active=true`);
+
+  // ---------- www/cloud.js provider boundary (no network, no keys) ----------
+  const cloudSrc = readFileSync(new URL("../www/cloud.js", import.meta.url), "utf8");
+  const makeCloudCtx = (config, fetchImpl) => {
+    const st = {};
+    const c = { console, JSON, Date, Math, Promise, Object, Array, String, Number,
+      localStorage: { getItem: (k) => st[k] ?? null, setItem: (k, v) => { st[k] = v; }, removeItem: (k) => { delete st[k]; } } };
+    c.window = c;
+    if (config) c.window.ALLOTTED_CLOUD_CONFIG = config;
+    if (fetchImpl) c.fetch = fetchImpl;
+    vm.createContext(c);
+    vm.runInContext(cloudSrc, c);
+    return c;
+  };
+
+  // 1) No config -> cloud.js defines nothing -> app stays on MockCloud
+  const c1 = makeCloudCtx(null);
+  check(c1.window.AllottedCloud === undefined, "cloud.js without config defines no bridge (mock fallback)");
+  const c1b = makeCloudCtx({ url: "", anonKey: "" });
+  check(c1b.window.AllottedCloud === undefined, "cloud.js with empty config defines no bridge");
+  check(run("cloudIsMock()") === true, "app provider resolution stays mock without a bridge");
+
+  // 2) With config + stubbed fetch: verify Supabase v2 call shapes, isolated in cloud.js
+  const calls = [];
+  const okJson = (obj) => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(obj)) });
+  const fakeFetch = (url, opts) => {
+    calls.push({ url, opts });
+    if (url.includes("/auth/v1/token?grant_type=password"))
+      return okJson({ access_token: "at1", refresh_token: "rt1", expires_in: 3600, user: { id: "uid-1", email: "a@b.co" } });
+    if (url.includes("/auth/v1/signup"))
+      return okJson({ access_token: "at2", refresh_token: "rt2", expires_in: 3600, user: { id: "uid-2", email: "c@d.co" } });
+    if (url.includes("/budget_snapshots?scope=eq."))
+      return okJson([{ payload: { months: {} }, updated_at: new Date().toISOString() }]);
+    return okJson([]);
+  };
+  const c2 = makeCloudCtx({ url: "stub-project.invalid", anonKey: "anon-key-stub" }, fakeFetch);
+  check(!!c2.window.AllottedCloud && c2.window.AllottedCloud.name === "supabase", "cloud.js with config defines AllottedCloud");
+  const u1 = await c2.window.AllottedCloud.signIn("a@b.co", "pw123456");
+  check(u1.user.id === "uid-1", "signInWithPassword flow returns user");
+  check(calls.some((c) => c.url.includes("/auth/v1/token?grant_type=password")), "sign-in hits GoTrue password grant");
+  await c2.window.AllottedCloud.push("user:uid-1", { months: {}, debts: [], rows: null });
+  const pushCall = calls.find((c) => c.url.includes("/budget_snapshots") && c.opts.method === "POST");
+  check(!!pushCall && pushCall.opts.headers.Authorization === "Bearer at1", "push upserts snapshot with user bearer token");
+  check(pushCall.opts.headers.apikey === "anon-key-stub", "requests carry anon key only");
+  const pulled = await c2.window.AllottedCloud.pull("user:uid-1");
+  check(pulled && typeof pulled.updatedAt === "number", "pull parses snapshot + updatedAt");
+
+  // 3) Offline / failed fetch -> clean error, not a crash
+  const c3 = makeCloudCtx({ url: "stub.invalid", anonKey: "k" }, () => Promise.reject(new TypeError("Failed to fetch")));
+  let offErr = "";
+  await c3.window.AllottedCloud.signIn("a@b.co", "x").catch((e) => (offErr = e.message));
+  check(/offline/i.test(offErr), "network failure maps to friendly offline error");
+
+  // 4) No session -> authed calls fail with clear message instead of leaking anon writes
+  const c4 = makeCloudCtx({ url: "stub.invalid", anonKey: "k" }, fakeFetch);
+  let sessErr = "";
+  await c4.window.AllottedCloud.push("user:x", {}).catch((e) => (sessErr = e.message));
+  check(/session|sign in/i.test(sessErr), "push without session demands sign-in");
+
   // ---------- Legacy backup (schema 11, no cloud) restores clean ----------
   run(`var _bk=JSON.parse(backupPayload()); delete _bk.cloud; _bk.schemaVersion=11; S=defaultState(); adoptState(_bk); migrate();`);
   check(run("S.cloud && S.cloud.syncEnabled===false"), "legacy backup restores with fresh cloud defaults");

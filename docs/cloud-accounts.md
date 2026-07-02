@@ -1,6 +1,6 @@
 # Allotted Cloud: Accounts, Sync, and Household Sharing
 
-Phase 1 is fully implemented and shipped in `www/index.html`: account screens, Cloud Sync screen, Household Sharing screen, a clean service layer (`AuthService`, `SyncService`, `HouseholdService`, `InviteService`, `MigrationService`), and a **mock cloud provider** so every flow is testable on-device today with zero backend. Phase 2 swaps the mock for real Supabase calls without touching the UI.
+Phase 1 is fully implemented and shipped in `www/index.html`: account screens, Cloud Sync screen, Household Sharing screen, a clean service layer (`AuthService`, `SyncService`, `HouseholdService`, `InviteService`, `MigrationService`), and a **mock cloud provider** so every flow is testable on-device today with zero backend. **Phase 2 is now implemented**: `www/cloud.js` is the live Supabase provider. With no config the app stays in local mock/test mode automatically; generate `www/cloud-config.js` and the same UI goes live.
 
 ## How free vs Premium works
 
@@ -11,7 +11,7 @@ Phase 1 is fully implemented and shipped in `www/index.html`: account screens, C
 ## Architecture (why Phase 2 is small)
 
 - All UI talks only to the services. The services talk to `cloudProvider()`, which returns `window.AllottedCloud` if a real bridge is loaded, otherwise the built-in `MockCloud`.
-- The app's local-first validator forbids network code in `index.html`. Real Supabase calls therefore live in a separate **`www/cloud.js`** (Phase 2, currently gitignored) that defines `window.AllottedCloud`, plus **`www/cloud-config.js`** (copied from `www/cloud-config.example.js`, gitignored) holding your project URL + anon key.
+- The app's local-first validator forbids network code in `index.html`. Real Supabase calls live ONLY in **`www/cloud.js`** (committed, loaded via a plain script tag), which defines `window.AllottedCloud` when **`www/cloud-config.js`** (generated, gitignored) provides a project URL + anon key. It is a small self-contained client speaking Supabase's stable HTTP endpoints - GoTrue auth (`signUp`, `signInWithPassword`, `signOut`, session refresh, `recover` for real password-reset emails) and PostgREST/RPC - with no SDK dependency and no CDN, so the app still works fully offline and the validator's no-network rule on `index.html` holds.
 - Sessions are stored under their own localStorage key (`allotted-session-v1`), deliberately **outside** the budget state - backups and restores never contain auth tokens.
 - Every created/edited bill, category, transaction, and debt is stamped with `createdAt/updatedAt/createdBy/updatedBy`; deletions record tombstones. Sync merges with last-write-wins by `updatedAt`, applies tombstones from both sides, never silently drops local edits, and surfaces "used newer copy of X" notices plus error states in the Cloud Sync screen.
 
@@ -19,40 +19,60 @@ Phase 1 is fully implemented and shipped in `www/index.html`: account screens, C
 
 Phase 1 syncs a merged snapshot per scope (personal or household). Row-level Supabase sync in Phase 2 uses `MigrationService.exportRows()`, which already maps the local model to the normalized tables in `docs/supabase-schema.sql` (with `user_id`, `household_id`, attribution, `deleted_at`, `version`).
 
-## Setting up Supabase (for Phase 2)
+## Setting up Supabase (10 minutes)
 
 1. **Create the project**: supabase.com -> New project. Any region; note the database password.
-2. **Run the schema**: open the project's **SQL Editor**, paste the entire contents of `docs/supabase-schema.sql`, run it once. This creates all tables (`profiles`, `households`, `household_members`, `household_invites`, `bills`, `income`, `expenses`, `subscriptions`, `debts`, `notes`, `sync_events`), the `join_household()` invite-redemption function, and Row Level Security on every table (no public unrestricted tables; invite codes cannot be enumerated or used to read household data).
-3. **Enable email auth**: Authentication -> Providers -> Email (on by default). Leave "Confirm email" on for production.
-4. **Get your keys**: Settings -> API. You need the **Project URL** and the **anon public** key. Never use the `service_role` key in the app.
-5. **Configure the app**:
-   - Copy `www/cloud-config.example.js` -> `www/cloud-config.js` and paste the URL + anon key.
-   - Copy `.env.example` -> `.env` for any tooling/CI that needs the same values.
-   - Both files are gitignored; `npm test` fails the build if either is committed.
-6. **Phase 2 bridge**: add `www/cloud.js` implementing `window.AllottedCloud` with this exact contract (all Promise-returning): `signUp(email, pass) -> {user}`, `signIn(email, pass) -> {user}`, `signOut()`, `resetPassword(email)`, `push(scope, payload)`, `pull(scope) -> {payload, updatedAt} | null`, `createHousehold(user, name) -> household`, `joinHousehold(user, code) -> household` (calls the `join_household` RPC), `getHousehold(id)`, `leaveHousehold(user, id)`. Load it with two script tags before the main script. The moment the bridge exists, the whole app switches from test mode to live automatically.
+2. **Run the schema**: SQL Editor -> paste ALL of `docs/supabase-schema.sql` -> Run. It is idempotent (safe to re-run) and creates every table plus Row Level Security - including `budget_snapshots` (what Cloud Sync reads/writes) and the `join_household()` invite RPC.
+3. **Enable email/password auth**: Authentication -> Providers -> Email (on by default). "Confirm email" ON is fine: the app tells new users to check their inbox, then sign in.
+4. **Get the keys**: Settings -> API. Copy the **Project URL** and the **anon public** key. Never the `service_role` key - `npm run cloud:config` refuses it outright, and `npm test` fails if `service_role` ever appears in app files.
 
-## Testing sign up / sign in (works today, in test mode)
+## Configuring the app
 
-1. Open **More -> Account** (or Premium -> Cloud Sync).
-2. Create account: any valid-looking email + 6-character password. You'll see the signed-in status UI with your email and account ID.
-3. Sign out, then sign back in with the same credentials. Wrong password shows an inline error.
-4. "Forgot password?" is a placeholder in test mode and explains that reset emails arrive with live cloud.
-5. Enable Premium (test purchase) -> Premium -> **Cloud Sync** -> Turn on -> **Sync now**. Watch status flip to "Backed up" with a last-synced time; make an edit and the chip flips to "Changes not synced" until the next sync.
+**Locally**
+```bash
+cp .env.example .env        # fill in SUPABASE_URL + SUPABASE_ANON_KEY
+npm run cloud:config        # generates gitignored www/cloud-config.js
+npm test                    # still passes; fails if the config were ever trackable
+```
+Delete `www/cloud-config.js` (or leave `.env` empty) and the app instantly returns to local mock mode - free local-only budgeting never depends on any of this.
 
-## Testing the household invite flow (works today, in test mode)
+**Codemagic**
+1. In the Codemagic app settings, create an environment group `supabase_cloud` with variables `SUPABASE_URL` and `SUPABASE_ANON_KEY` (mark the key "secure").
+2. Reference the group and add one script step before the iOS build (after `npm install`):
+```yaml
+    environment:
+      groups:
+        - appstore_signing
+        - supabase_cloud
+    scripts:
+      - name: Generate cloud config
+        script: node scripts/write-cloud-config.mjs
+```
+The step is safe even when the group is absent - it skips and ships the app in local test mode. The generated file lands in `www/` and gets bundled by `cap sync`.
 
-The mock cloud persists in its own localStorage space, so two "users" on the same device can simulate you and your spouse:
+## Testing
 
-1. Signed in as user A (Premium on), open **Household Sharing** -> Create household. Note the 8-character invite code.
-2. Sign out (Account screen). Create a second account (user B).
-3. Give user B Premium (test purchase), open Household Sharing -> **Enter an invite code** -> join.
-4. The member list now shows both accounts with roles and join times; both sync to the shared `house:` scope when Cloud Sync is on, and new items/edits are attributed to whichever account made them.
-5. Bad codes show "That invite code is not valid". Leaving keeps a full local copy.
+- `npm test` - static validation (no keys needed).
+- `npm run smoke` - 60 checks, no keys, no network: free mode, premium gating, mock accounts/sync/household, and the live provider itself with stubbed fetch (config fallback, sign-in flow, bearer tokens, offline errors).
+- `npm run cloud:smoke` - **live** test against your real project. Skips cleanly when `SUPABASE_URL`/`SUPABASE_ANON_KEY` are unset. When set, it signs up two throwaway accounts (or uses `SUPABASE_TEST_EMAIL`/`SUPABASE_TEST_PASSWORD` and `..._EMAIL2`/`..._PASSWORD2` if email confirmation is on), round-trips a snapshot, creates a household, joins with the invite code from the second account, syncs the shared scope, and asserts the RLS negatives below.
 
-`npm run smoke` automates all of the above (see `scripts/smoke-test.mjs`).
+**Two accounts + household invite, by hand on device/simulator**: build with config -> Account -> create user A (confirm email if enabled) -> test-Premium -> Cloud Sync on -> Household Sharing -> Create -> note the code. Second device (or after sign-out): create user B -> Premium -> Household Sharing -> enter code -> both see the member list, and Sync now moves the shared budget between accounts.
+
+## Verifying RLS
+
+`npm run cloud:smoke` asserts the important ones automatically: an anonymous request reads **zero rows from every table**, and user B cannot pull user A's personal snapshot. To eyeball it in the dashboard: Authentication -> Policies should show RLS enabled on all 12 tables with no `public`/`anon` allow-all policy; and in the SQL editor `select * from public.budget_snapshots;` run as the `anon` role returns nothing.
+
+## Replacing this client with the official SDK (optional, later)
+
+`www/cloud.js` is the only file to touch. Map each method body to `@supabase/supabase-js` v2: `signUp` -> `supabase.auth.signUp`, `signIn` -> `auth.signInWithPassword`, `signOut` -> `auth.signOut`, `getSession` -> `auth.getSession`, `resetPassword` -> `auth.resetPasswordForEmail`, `push`/`pull` -> `from("budget_snapshots").upsert()/.select()`, `joinHousehold` -> `rpc("join_household", ...)`. Keep the exported contract identical and nothing else in the app changes. You would vendor the SDK bundle into `www/` (no CDN) to preserve offline behavior.
+
+## Phase 2.1 (documented, not yet built)
+
+- **Realtime**: Supabase Realtime (websocket) subscriptions on the `house:` scope so a partner's sync triggers an automatic pull. The manual Sync now flow is deliberately independent, so adding or removing realtime can never break normal sync. The custom client doesn't speak websockets; do this together with the SDK swap above.
+- **Row-level sync**: the normalized tables are already mirrored on every push (best-effort); moving the merge from snapshots to per-row `updated_at`/`version` is the follow-up.
+- **In-app account deletion** (App Store requirement once live accounts ship).
 
 ## App Store notes
-
 - **Sign in with Apple**: with email/password only, Apple does not require it. The moment you add any third-party login (Google, Facebook, etc.), App Review guideline 4.8 requires offering **Sign in with Apple** (or an equivalent privacy-preserving option) too. Plan for it before adding social logins.
 - **Account deletion**: once live accounts ship, Apple requires an in-app account deletion path - add it to the Account screen in Phase 2 (Supabase: delete the auth user; cascades clean up the rest).
 - **App Privacy**: live cloud changes the answers from "Data Not Collected" - you'll be collecting email (account) and app content (synced budget), linked to the user. Update the questionnaire with the Phase 2 release.

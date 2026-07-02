@@ -1,6 +1,6 @@
 {
   "name": "allotted",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "description": "Allotted - give every dollar a job.",
   "scripts": {
@@ -10,7 +10,9 @@
     "add:ios": "cap add ios",
     "assets": "capacitor-assets generate --ios",
     "open:ios": "cap open ios",
-    "smoke": "node scripts/smoke-test.mjs"
+    "smoke": "node scripts/smoke-test.mjs",
+    "cloud:config": "node scripts/write-cloud-config.mjs",
+    "cloud:smoke": "node scripts/cloud-smoke.mjs"
   },
   "dependencies": {
     "@capacitor/core": "7.0.0",
