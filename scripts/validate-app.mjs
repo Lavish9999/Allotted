@@ -13,6 +13,8 @@ const requiredFiles = [
   "docs/cloud-accounts.md",
   ".env.example",
   "www/cloud-config.example.js",
+  "www/cloud.js",
+  "scripts/write-cloud-config.mjs",
 ];
 
 let failures = 0;
@@ -37,11 +39,14 @@ if (existsSync("scripts/apply-index-fixes.mjs")) {
   fail("Build-time index patcher must not exist. www/index.html must be the source of truth.");
 }
 
+// Generated local files may exist (npm run cloud:config creates one before
+// builds) but must never be trackable: they hold project keys.
+const gitignore = read(".gitignore");
+if (!gitignore.includes("www/cloud-config.js")) fail(".gitignore must ignore www/cloud-config.js");
+if (!gitignore.includes(".env")) fail(".gitignore must ignore .env");
 if (existsSync("www/cloud-config.js")) {
-  fail("www/cloud-config.js must not be committed. Copy www/cloud-config.example.js locally instead.");
-}
-if (existsSync(".env")) {
-  fail(".env must not be committed. Use .env.example as the template.");
+  const localCfg = read("www/cloud-config.js");
+  if (/service_role/i.test(localCfg)) fail("Local www/cloud-config.js contains a service_role reference - regenerate with the anon key");
 }
 
 const html = read("www/index.html");
@@ -99,6 +104,7 @@ if (html) {
     ["conflict-safe merge", ["function mergeCloudStates"]],
     ["cloud state default", ["function defaultCloud"]],
     ["session stored outside backups", ["allotted-session-v1"]],
+    ["provider script tags", ["<script src=\"cloud.js\">"]],
   ];
 
   for (const [label, needles] of checks) {
@@ -109,7 +115,17 @@ if (html) {
   if (/https?:\/\//i.test(html)) fail("Unexpected external URL found in app shell");
   if (/@import/i.test(html)) fail("Unexpected CSS @import found in app shell");
   const cfgExample = read("www/cloud-config.example.js");
-  if (/eyJ[A-Za-z0-9_-]{24,}/.test(html + cfgExample)) fail("Possible real Supabase key committed in app files");
+  const cloudjs = read("www/cloud.js");
+  if (/eyJ[A-Za-z0-9_-]{24,}/.test(html + cfgExample + cloudjs)) fail("Possible real Supabase key committed in app files");
+  if (/service_role/i.test(html + cfgExample + cloudjs)) fail("service_role must never appear in app files");
+  if (cloudjs) {
+    if (!cloudjs.includes("window.AllottedCloud")) fail("cloud.js must define the AllottedCloud provider bridge");
+    if (!cloudjs.includes("ALLOTTED_CLOUD_CONFIG")) fail("cloud.js must no-op without cloud config (mock fallback)");
+    if (!cloudjs.includes("grant_type=password")) fail("cloud.js missing signInWithPassword flow");
+    if (!cloudjs.includes("rpc/join_household")) fail("cloud.js must join households via the secure join_household RPC");
+    if (!cloudjs.includes("/auth/v1/recover")) fail("cloud.js missing password reset flow");
+  }
+  if (html.includes("supabase.co") || html.includes("createClient(")) fail("Supabase calls must stay isolated in www/cloud.js");
 }
 
 const support = read("www/support.html");

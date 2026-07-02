@@ -19,7 +19,7 @@ Both IDs live in one place in `www/index.html`: the `PREMIUM_PRODUCTS` constant.
 - **Subscription Watch** (`psubs`): auto-detects recurring monthly items as likely subscriptions (keyed by normalized name so status survives month carry-forward), lets the user mark each active / canceling / ignored, and shows the active monthly total plus yearly savings from cancellations. Statuses persist in `S.premium.subWatch`.
 - **Debt Payoff Planner**: the free debt screen is untouched; Premium appends a planner section with a snowball-vs-avalanche comparison (`debtSim()` runs both), a strategy toggle, an extra-payment input (this is the first UI for `S.debtPlan.strategy`/`extra`), payoff order with per-debt timeline bars, and a debt-free date.
 - **Weekly Money Review** (`pweekly`): last-7-days money in (from paydays, or estimated from monthly income), money out, biggest category, bills paid, leftover, and one rule-based suggested action.
-- **Cloud Sync + Household Sharing** (`pcloud`, `phouse`): account-backed backup/sync and shared partner budgeting. Full details in `docs/cloud-accounts.md`.
+- **Cloud Sync + Household Sharing** (`pcloud`, `phouse`): account-backed backup/sync and shared partner budgeting - live via Supabase when configured, local test mode otherwise. Full details in `docs/cloud-accounts.md`.
 - **PremiumGate**: `premiumGate(fullFn, previewHTML)` wraps any tool. Premium users get the real tool; free users get a non-interactive preview populated with clearly labeled sample data plus an Unlock CTA. To gate a future feature, wrap it in one call.
 
 ## State and storage

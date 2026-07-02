@@ -52,6 +52,8 @@
 <div id="app"></div>
 <div id="modal"></div>
 <input id="fileInput" type="file" accept=".json,application/json" hidden>
+<script src="cloud-config.js"></script>
+<script src="cloud.js"></script>
 <script>
 const KEY="budget-app-v1",SCHEMA=12,$=s=>document.querySelector(s);
 const fmt=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(+n||0);
@@ -341,7 +343,7 @@ scope(){let u=currentUser();if(!u)return null;return S.cloud&&S.cloud.household?
 canEnable(){return !!(isPremium()&&currentUser()&&cloudReady())},
 enable(){if(!this.canEnable())return false;S.cloud.syncEnabled=true;S.cloud.lastError="";commit();this.syncNow();return true},
 disable(){S.cloud.syncEnabled=false;S.cloud.syncStatus="idle";commit()},
-snapshot(){return{months:S.months,debts:S.debts,subWatch:(S.premium&&S.premium.subWatch)||{},tombstones:S.cloud.tombstones||[]}},
+snapshot(){return{months:S.months,debts:S.debts,subWatch:(S.premium&&S.premium.subWatch)||{},tombstones:S.cloud.tombstones||[],rows:MigrationService.exportRows()}},
 syncNow(){let u=currentUser();
 if(!u){S.cloud.syncStatus="error";S.cloud.lastError="Sign in to sync";save();render();return Promise.resolve(false)}
 if(!isPremium()){S.cloud.syncStatus="error";S.cloud.lastError="Cloud Sync is a Premium feature";save();render();return Promise.resolve(false)}
@@ -355,8 +357,8 @@ if(rp&&rp.subWatch)S.premium.subWatch={...rp.subWatch,...(S.premium.subWatch||{}
 merged.notices.forEach(n=>cloudNotice(n));migrate();
 return cloudProvider().push(scope,this.snapshot())}).then(()=>{S.cloud.lastSyncedAt=Date.now();S.cloud.syncStatus="ok";save();render();return true}).catch(e=>{S.cloud.syncStatus="error";S.cloud.lastError=(e&&e.message)||"Sync failed";cloudNotice("Sync failed: "+S.cloud.lastError);save();render();return false})}};
 const HouseholdService={
-create(name){let u=currentUser();if(!u)return Promise.reject(new Error("Sign in first"));return cloudProvider().createHousehold(u,name).then(h=>{S.cloud.household={id:h.id,name:h.name,inviteCode:h.code,role:"owner",members:h.members};commit();return h})},
-join(code){let u=currentUser();if(!u)return Promise.reject(new Error("Sign in first"));return cloudProvider().joinHousehold(u,code).then(h=>{S.cloud.household={id:h.id,name:h.name,inviteCode:h.code,role:h.createdBy===u.id?"owner":"member",members:h.members};commit();if(S.cloud.syncEnabled)SyncService.syncNow();return h})},
+create(name){let u=currentUser();if(!u)return Promise.reject(new Error("Sign in first"));if(!isPremium())return Promise.reject(new Error("Household Sharing is a Premium feature"));return cloudProvider().createHousehold(u,name).then(h=>{S.cloud.household={id:h.id,name:h.name,inviteCode:h.code,role:"owner",members:h.members};commit();return h})},
+join(code){let u=currentUser();if(!u)return Promise.reject(new Error("Sign in first"));if(!isPremium())return Promise.reject(new Error("Household Sharing is a Premium feature"));return cloudProvider().joinHousehold(u,code).then(h=>{S.cloud.household={id:h.id,name:h.name,inviteCode:h.code,role:h.createdBy===u.id?"owner":"member",members:h.members};commit();if(S.cloud.syncEnabled)SyncService.syncNow();return h})},
 refresh(){if(!S.cloud.household)return Promise.resolve(null);return cloudProvider().getHousehold(S.cloud.household.id).then(h=>{if(h){S.cloud.household.members=h.members;S.cloud.household.name=h.name;S.cloud.household.inviteCode=h.code;save()}return h})},
 leave(){let u=currentUser();if(!u||!S.cloud.household)return Promise.resolve(false);return cloudProvider().leaveHousehold(u,S.cloud.household.id).then(()=>{S.cloud.household=null;commit();return true})}};
 const MigrationService={

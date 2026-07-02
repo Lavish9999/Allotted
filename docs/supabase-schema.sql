@@ -96,7 +96,7 @@ end $$;
 -- =========================================================
 
 create table if not exists public.bills (
-  id           uuid primary key default gen_random_uuid(),
+  id           text primary key,  -- the app's local item/txn id
   user_id      uuid not null references auth.users(id) on delete cascade,
   household_id uuid references public.households(id) on delete cascade,
   month        text not null,              -- 'YYYY-MM'
@@ -113,7 +113,7 @@ create table if not exists public.bills (
 );
 
 create table if not exists public.income (
-  id           uuid primary key default gen_random_uuid(),
+  id           text primary key,  -- the app's local item/txn id
   user_id      uuid not null references auth.users(id) on delete cascade,
   household_id uuid references public.households(id) on delete cascade,
   month        text not null,
@@ -128,10 +128,10 @@ create table if not exists public.income (
 );
 
 create table if not exists public.expenses (
-  id           uuid primary key default gen_random_uuid(),
+  id           text primary key,  -- the app's local item/txn id
   user_id      uuid not null references auth.users(id) on delete cascade,
   household_id uuid references public.households(id) on delete cascade,
-  bill_or_category_id uuid,                -- local item id the expense counts against
+  bill_or_category_id text,                -- local item id the expense counts against
   month        text not null,
   spent_on     date not null,
   amount       numeric(12,2) not null default 0,
@@ -144,7 +144,7 @@ create table if not exists public.expenses (
 );
 
 create table if not exists public.subscriptions (
-  id           uuid primary key default gen_random_uuid(),
+  id           text primary key,  -- the app's local item/txn id
   user_id      uuid not null references auth.users(id) on delete cascade,
   household_id uuid references public.households(id) on delete cascade,
   name         text not null,
@@ -159,7 +159,7 @@ create table if not exists public.subscriptions (
 );
 
 create table if not exists public.debts (
-  id           uuid primary key default gen_random_uuid(),
+  id           text primary key,  -- the app's local item/txn id
   user_id      uuid not null references auth.users(id) on delete cascade,
   household_id uuid references public.households(id) on delete cascade,
   name         text not null,
@@ -175,10 +175,10 @@ create table if not exists public.debts (
 );
 
 create table if not exists public.notes (
-  id           uuid primary key default gen_random_uuid(),
+  id           text primary key,  -- the app's local item/txn id
   user_id      uuid not null references auth.users(id) on delete cascade,
   household_id uuid references public.households(id) on delete cascade,
-  ref_id       uuid,                       -- expense/bill the note belongs to
+  ref_id       text,                       -- expense/bill the note belongs to
   body         text not null default '',
   created_by   uuid references auth.users(id),
   updated_by   uuid references auth.users(id),
@@ -186,6 +186,17 @@ create table if not exists public.notes (
   updated_at   timestamptz not null default now(),
   deleted_at   timestamptz,
   version      int not null default 1
+);
+
+-- Whole-budget snapshots per scope ("user:<uid>" or "house:<household_id>").
+-- This is what Cloud Sync pushes/pulls; the normalized tables above are
+-- mirrored from it for reporting and future row-level sync.
+create table if not exists public.budget_snapshots (
+  scope        text primary key,
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  household_id uuid references public.households(id) on delete cascade,
+  payload      jsonb not null,
+  updated_at   timestamptz not null default now()
 );
 
 -- Sync audit trail (optional but useful for conflict debugging)
@@ -221,16 +232,28 @@ alter table public.subscriptions     enable row level security;
 alter table public.debts             enable row level security;
 alter table public.notes             enable row level security;
 alter table public.sync_events       enable row level security;
+alter table public.budget_snapshots  enable row level security;
 
 -- Profiles: users manage only their own row.
+drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles for select using (id = auth.uid());
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles for update using (id = auth.uid());
+drop policy if exists "profiles_select_housemates" on public.profiles;
+create policy "profiles_select_housemates" on public.profiles for select using (
+  exists (
+    select 1 from public.household_members m1
+    join public.household_members m2 on m1.household_id = m2.household_id
+    where m1.user_id = auth.uid() and m2.user_id = profiles.id));
 
 -- Households: members can read; owners can update; any signed-in user can create.
+drop policy if exists "households_select_member" on public.households;
 create policy "households_select_member" on public.households
   for select using (public.is_household_member(id));
+drop policy if exists "households_insert_own" on public.households;
 create policy "households_insert_own" on public.households
   for insert with check (created_by = auth.uid());
+drop policy if exists "households_update_owner" on public.households;
 create policy "households_update_owner" on public.households
   for update using (exists (
     select 1 from public.household_members m
@@ -238,20 +261,26 @@ create policy "households_update_owner" on public.households
 
 -- Members: members can see the member list; users insert themselves only via
 -- join_household() (security definer) or as owner when creating; users can leave.
+drop policy if exists "members_select_member" on public.household_members;
 create policy "members_select_member" on public.household_members
   for select using (public.is_household_member(household_id));
+drop policy if exists "members_insert_self_owner" on public.household_members;
 create policy "members_insert_self_owner" on public.household_members
   for insert with check (user_id = auth.uid());
+drop policy if exists "members_delete_self" on public.household_members;
 create policy "members_delete_self" on public.household_members
   for delete using (user_id = auth.uid());
 
 -- Invites: creation/read restricted to household members. Redemption happens
 -- ONLY through join_household(code); non-members can never select invites, so
 -- codes cannot be enumerated and never expose household data.
+drop policy if exists "invites_select_member" on public.household_invites;
 create policy "invites_select_member" on public.household_invites
   for select using (public.is_household_member(household_id));
+drop policy if exists "invites_insert_member" on public.household_invites;
 create policy "invites_insert_member" on public.household_invites
   for insert with check (public.is_household_member(household_id) and created_by = auth.uid());
+drop policy if exists "invites_delete_member" on public.household_invites;
 create policy "invites_delete_member" on public.household_invites
   for delete using (public.is_household_member(household_id));
 
@@ -262,6 +291,10 @@ do $$
 declare t text;
 begin
   foreach t in array array['bills','income','expenses','subscriptions','debts','notes'] loop
+    execute format('drop policy if exists "%1$s_select" on public.%1$s', t);
+    execute format('drop policy if exists "%1$s_insert" on public.%1$s', t);
+    execute format('drop policy if exists "%1$s_update" on public.%1$s', t);
+    execute format('drop policy if exists "%1$s_delete" on public.%1$s', t);
     execute format('create policy "%1$s_select" on public.%1$s for select using (
       (household_id is null and user_id = auth.uid()) or
       (household_id is not null and public.is_household_member(household_id)))', t);
@@ -277,10 +310,26 @@ begin
   end loop;
 end $$;
 
+-- Snapshots: personal scope only by its owner; household scope by any member.
+drop policy if exists "snapshots_select" on public.budget_snapshots;
+create policy "snapshots_select" on public.budget_snapshots for select using (
+  (household_id is null and user_id = auth.uid()) or
+  (household_id is not null and public.is_household_member(household_id)));
+drop policy if exists "snapshots_insert" on public.budget_snapshots;
+create policy "snapshots_insert" on public.budget_snapshots for insert with check (
+  user_id = auth.uid() and
+  (household_id is null or public.is_household_member(household_id)));
+drop policy if exists "snapshots_update" on public.budget_snapshots;
+create policy "snapshots_update" on public.budget_snapshots for update using (
+  (household_id is null and user_id = auth.uid()) or
+  (household_id is not null and public.is_household_member(household_id)));
+
 -- Sync events: writer-owned, household-readable.
+drop policy if exists "sync_events_select" on public.sync_events;
 create policy "sync_events_select" on public.sync_events
   for select using (
     (household_id is null and user_id = auth.uid()) or
     (household_id is not null and public.is_household_member(household_id)));
+drop policy if exists "sync_events_insert" on public.sync_events;
 create policy "sync_events_insert" on public.sync_events
   for insert with check (user_id = auth.uid());
