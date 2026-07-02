@@ -4,7 +4,7 @@
   "description": "Allotted native iOS StoreKit bridge for Premium subscriptions.",
   "main": "index.js",
   "files": [
-    "AllottedIAP.podspec",
+    "AllottedIap.podspec",
     "ios",
     "index.js",
     "package.json"

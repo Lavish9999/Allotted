@@ -16,8 +16,8 @@ const requiredFiles = [
   "www/cloud.js",
   "www/iap-bridge.js",
   "plugins/allotted-iap/package.json",
-  "plugins/allotted-iap/AllottedIAP.podspec",
-  "plugins/allotted-iap/ios/Sources/AllottedIAPPlugin/AllottedIAPPlugin.swift",
+  "plugins/allotted-iap/AllottedIap.podspec",
+  "plugins/allotted-iap/ios/Sources/AllottedIapPlugin/AllottedIapPlugin.swift",
   "scripts/write-cloud-config.mjs",
 ];
 
@@ -188,19 +188,20 @@ if (pkgText) {
 }
 
 const iapPkg = read("plugins/allotted-iap/package.json");
-const iapPodspec = read("plugins/allotted-iap/AllottedIAP.podspec");
-const iapSwift = read("plugins/allotted-iap/ios/Sources/AllottedIAPPlugin/AllottedIAPPlugin.swift");
+const iapPodspec = read("plugins/allotted-iap/AllottedIap.podspec");
+const iapSwift = read("plugins/allotted-iap/ios/Sources/AllottedIapPlugin/AllottedIapPlugin.swift");
 if (iapPkg) {
   const parsed = JSON.parse(iapPkg);
   if (parsed.name !== "@allotted/iap") fail("IAP plugin package name should be @allotted/iap");
   if (parsed.capacitor?.ios?.src !== "ios") fail("IAP plugin must declare an iOS Capacitor source");
 }
 if (iapPodspec) {
+  if (!iapPodspec.includes("s.name = 'AllottedIap'")) fail("IAP podspec name must match Capacitor's expected CocoaPods casing");
   if (!iapPodspec.includes("s.dependency 'Capacitor'")) fail("IAP podspec must depend on Capacitor");
   if (!iapPodspec.includes("ios/Sources")) fail("IAP podspec must include Swift source files");
 }
 if (iapSwift) {
-  for (const marker of ["import StoreKit", "Product.products", "product.purchase()", "AppStore.sync()", "Transaction.currentEntitlements", "allotted.premium.monthly", "allotted.premium.yearly", '"active": false']) {
+  for (const marker of ["@objc(AllottedIapPlugin)", "class AllottedIapPlugin", 'jsName = "AllottedIAP"', "import StoreKit", "Product.products", "product.purchase()", "AppStore.sync()", "Transaction.currentEntitlements", "allotted.premium.monthly", "allotted.premium.yearly", '"active": false']) {
     if (!iapSwift.includes(marker)) fail(`IAP Swift bridge missing ${marker}`);
   }
 }
